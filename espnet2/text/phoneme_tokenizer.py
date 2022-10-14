@@ -12,6 +12,7 @@ from espnet2.text.abs_tokenizer import AbsTokenizer
 
 g2p_choices = [
     None,
+    "byte",
     "g2p_en",
     "g2p_en_no_space",
     "pyopenjtalk",
@@ -58,6 +59,11 @@ def pyopenjtalk_g2p(text) -> List[str]:
     phones = pyopenjtalk.g2p(text, kana=False)
     phones = phones.split(" ")
     return phones
+
+
+def byte_tokenizer(text) -> List[str]:
+    byte_seq = [str(p) for p in text.encode(encoding='utf-8')]
+    return byte_seq
 
 
 def pyopenjtalk_g2p_accent(text) -> List[str]:
@@ -404,6 +410,8 @@ class PhonemeTokenizer(AbsTokenizer):
         assert check_argument_types()
         if g2p_type is None:
             self.g2p = split_by_space
+        elif g2p_type == "byte":
+            self.g2p = byte_tokenizer
         elif g2p_type == "g2p_en":
             self.g2p = G2p_en(no_space=False)
         elif g2p_type == "g2p_en_no_space":

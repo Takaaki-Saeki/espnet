@@ -25,17 +25,12 @@ stop_stage=2
 . ./cmd.sh || exit 1
 . ./db.sh || exit 1
 
-if [ -z "${M_AILABS}" ]; then
-    log "Fill the value of 'JSUT' of db.sh"
-    exit 1
-fi
-db_root=${M_AILABS}
-
+db_root=/home/saeki/workspace/ssd1/mailab/
 # silence part trimming related
 do_trimming=true
 nj=32
 
-token_type=phn
+token_type=byte
 
 # locale all
 langs=("de_DE" "en_UK" "it_IT" "es_ES" "en_US" "fr_FR" "uk_UK" "ru_RU" "pl_PL")

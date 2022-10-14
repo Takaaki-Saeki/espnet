@@ -56,6 +56,15 @@ def build_tokenizer(
             remove_non_linguistic_symbols=remove_non_linguistic_symbols,
         )
 
+    elif token_type == "byte":
+        # Using PhonemeTokenizer class for byte input
+        return PhonemeTokenizer(
+            g2p_type="byte",
+            non_linguistic_symbols=non_linguistic_symbols,
+            space_symbol=space_symbol,
+            remove_non_linguistic_symbols=remove_non_linguistic_symbols,
+        )
+
     else:
         raise ValueError(
             f"token_mode must be one of bpe, word, char or phn: " f"{token_type}"

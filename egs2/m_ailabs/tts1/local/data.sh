@@ -10,7 +10,7 @@ log() {
 }
 SECONDS=0
 
-train_type=en_us
+train_type=multilingual
 log "$0 $*"
 . utils/parse_options.sh
 

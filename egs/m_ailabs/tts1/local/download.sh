@@ -25,15 +25,15 @@ if ! $(echo ${available_langs[*]} | grep -q ${lang}); then
 fi
 
 # download dataset
-cwd=`pwd`
+cwd=$(pwd)
 if [ ! -e ${db}/${lang} ]; then
     mkdir -p ${db}
     cd ${db}
-    wget http://www.caito.de/data/Training/stt_tts/${lang}.tgz
+    wget https://data.solak.de/data/Training/stt_tts/${lang}.tgz
     tar xvf ${lang}.tgz
     rm ${lang}.tgz
     cd $cwd
     echo "Successfully finished download."
 else
-    echo "Already exists. Skip download."
+    echo "${db}/${lang} already exists. Skip download."
 fi

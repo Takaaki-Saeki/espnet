@@ -5,11 +5,13 @@ set -e
 set -u
 set -o pipefail
 
-fs=22050
+fs=16000
 n_fft=1024
 n_shift=256
+lang_filt=false
+mos_filt=false
 
-local_data_opts+=" --fs ${fs}"
+local_data_opts+=" --fs ${fs} --lang_filt ${lang_filt} --mos_filt ${mos_filt}"
 
 opts=
 if [ "${fs}" -eq 22050 ]; then

@@ -1,8 +1,8 @@
-# This configuration is for ESPnet2 to train VITS, which
-# is truely end-to-end text-to-waveform model. To run
-# this config, you need to specify "--tts_task gan_tts"
-# option for tts.sh at least and use 22050 hz audio as
-# the training data (mainly tested on LJspeech).
+# This configuration is for ESPnet2 to train multi-speaker
+# VITS with x-vector instead of sepeaker ID embedding.
+# To run this config, you need to specify "--tts_task gan_tts"
+# and "--use_xvector true" options for tts.sh at least and use
+# 22khz audio as the training data (mainly tested on LibriTTS).
 # This configuration tested on 4 GPUs (V100) with 32GB GPU
 # memory. It takes around 2 weeks to finish the training
 # but 100k iters model should generate reasonable results.
@@ -17,7 +17,8 @@ tts_conf:
     generator_params:
         hidden_channels: 192
         spks: -1
-        global_channels: -1
+        spk_embed_dim: 512
+        global_channels: 256
         segment_size: 32
         text_encoder_attention_heads: 2
         text_encoder_ffn_expand: 4
@@ -112,7 +113,7 @@ tts_conf:
         average_by_layers: false         # whether to average loss value by #layers of each discriminator
         include_final_outputs: true      # whether to include final outputs for loss calculation
     mel_loss_params:
-        fs: 16000          # must be the same as the training data
+        fs: 22050          # must be the same as the training data
         n_fft: 1024        # fft points
         hop_length: 256    # hop size
         win_length: null   # window length
@@ -127,7 +128,7 @@ tts_conf:
     lambda_dur: 1.0        # loss scaling coefficient for duration loss
     lambda_kl: 1.0         # loss scaling coefficient for KL divergence loss
     # others
-    sampling_rate: 16000          # needed in the inference for saving wav
+    sampling_rate: 22050          # needed in the inference for saving wav
     cache_generator_outputs: true # whether to cache generator outputs in the training
 
 ##########################################################
@@ -161,7 +162,7 @@ generator_first: false # whether to start updating generator first
 num_iters_per_epoch: 1000 # number of iterations per epoch
 max_epoch: 1000           # number of epochs
 accum_grad: 1             # gradient accumulation
-batch_bins: 2500000       # batch bins (feats_type=raw)
+batch_bins: 5000000       # batch bins (feats_type=raw)
 batch_type: numel         # how to make batch
 grad_clip: -1             # gradient clipping norm
 grad_noise: false         # whether to use gradient noise injection

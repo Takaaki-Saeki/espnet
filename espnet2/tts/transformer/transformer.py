@@ -3,6 +3,7 @@
 
 """Transformer-TTS related modules."""
 
+import random
 from typing import Dict, Optional, Sequence, Tuple
 
 import torch
@@ -29,6 +30,12 @@ from espnet.nets.pytorch_backend.transformer.embedding import (
 )
 from espnet.nets.pytorch_backend.transformer.encoder import Encoder
 from espnet.nets.pytorch_backend.transformer.mask import subsequent_mask
+from espnet.nets.pytorch_backend.transducer.vgg2l import VGG2L
+from espnet.nets.pytorch_backend.transformer.subsampling import (
+    Conv2dSubsampling,
+    Conv2dSubsampling6,
+    Conv2dSubsampling8,
+)
 
 
 class Transformer(AbsTTS):
@@ -110,6 +117,7 @@ class Transformer(AbsTTS):
         modules_applied_guided_attn: Sequence[str] = ("encoder-decoder"),
         guided_attn_loss_sigma: float = 0.4,
         guided_attn_loss_lambda: float = 1.0,
+        use_mlm_loss: bool = False
     ):
         """Initialize Transformer module.
 
@@ -210,10 +218,12 @@ class Transformer(AbsTTS):
         self.idim = idim
         self.odim = odim
         self.eos = idim - 1
+        self.mask = 1 # same as unk id
         self.reduction_factor = reduction_factor
         self.use_gst = use_gst
         self.use_guided_attn_loss = use_guided_attn_loss
         self.use_scaled_pos_enc = use_scaled_pos_enc
+        self.use_mlm_loss = use_mlm_loss
         self.loss_type = loss_type
         self.use_guided_attn_loss = use_guided_attn_loss
         if self.use_guided_attn_loss:
@@ -226,6 +236,9 @@ class Transformer(AbsTTS):
             else:
                 self.num_heads_applied_guided_attn = num_heads_applied_guided_attn
             self.modules_applied_guided_attn = modules_applied_guided_attn
+        
+        if self.use_mlm_loss:
+            self.mlm_criterion = torch.nn.MSELoss()
 
         # use idx 0 as padding idx
         self.padding_idx = 0
@@ -256,7 +269,23 @@ class Transformer(AbsTTS):
             encoder_input_layer = torch.nn.Embedding(
                 num_embeddings=idim, embedding_dim=adim, padding_idx=self.padding_idx
             )
-        self.encoder = Encoder(
+
+        # define spk and lang embedding
+        self.spks = None
+        if spks is not None and spks > 1:
+            self.spks = spks
+            self.sid_emb = torch.nn.Embedding(spks, adim)
+        self.langs = None
+        if langs is not None and langs > 1:
+            self.langs = langs
+            self.lid_emb = torch.nn.Embedding(langs, adim)
+
+        if self.langs:
+            encoder_cls = EncoderWithLid
+        else:
+            encoder_cls = Encoder
+        
+        self.encoder = encoder_cls(
             idim=idim,
             attention_dim=adim,
             attention_heads=aheads,
@@ -270,8 +299,7 @@ class Transformer(AbsTTS):
             normalize_before=encoder_normalize_before,
             concat_after=encoder_concat_after,
             positionwise_layer_type=positionwise_layer_type,
-            positionwise_conv_kernel_size=positionwise_conv_kernel_size,
-        )
+            positionwise_conv_kernel_size=positionwise_conv_kernel_size)
 
         # define GST
         if self.use_gst:
@@ -287,16 +315,6 @@ class Transformer(AbsTTS):
                 gru_layers=gst_gru_layers,
                 gru_units=gst_gru_units,
             )
-
-        # define spk and lang embedding
-        self.spks = None
-        if spks is not None and spks > 1:
-            self.spks = spks
-            self.sid_emb = torch.nn.Embedding(spks, adim)
-        self.langs = None
-        if langs is not None and langs > 1:
-            self.langs = langs
-            self.lid_emb = torch.nn.Embedding(langs, adim)
 
         # define projection layer
         self.spk_embed_dim = None
@@ -435,7 +453,7 @@ class Transformer(AbsTTS):
         labels = F.pad(labels, [0, 1], "constant", 1.0)
 
         # calculate transformer outputs
-        after_outs, before_outs, logits = self._forward(
+        after_outs, before_outs, logits, mlm_loss = self._forward(
             xs=xs,
             ilens=ilens,
             ys=ys,
@@ -472,11 +490,15 @@ class Transformer(AbsTTS):
             loss = l1_loss + l2_loss + bce_loss
         else:
             raise ValueError("unknown --loss-type " + self.loss_type)
+        
+        # Adding mlm loss
+        loss += mlm_loss
 
         stats = dict(
             l1_loss=l1_loss.item(),
             l2_loss=l2_loss.item(),
             bce_loss=bce_loss.item(),
+            mlm_loss=mlm_loss.item()
         )
 
         # calculate guided attention loss
@@ -561,7 +583,20 @@ class Transformer(AbsTTS):
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # forward encoder
         x_masks = self._source_mask(ilens)
-        hs, h_masks = self.encoder(xs, x_masks)
+
+        # Applying bert mask
+        xs_masked, mask_pos = self._bert_mask(xs, ilens)
+
+        # Injecting language embedding inside the encoder
+        if self.langs:
+            lid_embs = self.lid_emb(lids.view(-1))
+            hs, h_masks = self.encoder(xs, x_masks, lid_embs)
+            if self.use_mlm_loss:
+                hs_mlm, _ = self.encoder(xs_masked, x_masks, lid_embs)
+        else:
+            hs, h_masks = self.encoder(xs, x_masks)
+            if self.use_mlm_loss:
+                hs_mlm, _ = self.encoder(xs_masked, x_masks)
 
         # integrate with GST
         if self.use_gst:
@@ -572,9 +607,10 @@ class Transformer(AbsTTS):
         if self.spks is not None:
             sid_embs = self.sid_emb(sids.view(-1))
             hs = hs + sid_embs.unsqueeze(1)
-        if self.langs is not None:
-            lid_embs = self.lid_emb(lids.view(-1))
-            hs = hs + lid_embs.unsqueeze(1)
+        
+        # if self.langs is not None:
+        #    lid_embs = self.lid_emb(lids.view(-1))
+        #    hs = hs + lid_embs.unsqueeze(1)
 
         # integrate speaker embedding
         if self.spk_embed_dim is not None:
@@ -606,8 +642,15 @@ class Transformer(AbsTTS):
             after_outs = before_outs + self.postnet(
                 before_outs.transpose(1, 2)
             ).transpose(1, 2)
+        
+        if self.use_mlm_loss:
+            mlm_loss = self.mlm_criterion(
+                torch.masked_select(hs, mask_pos),
+                torch.masked_select(hs_mlm, mask_pos))
+        else:
+            mlm_loss = torch.tensor(0.0).to(xs.device)
 
-        return after_outs, before_outs, logits
+        return after_outs, before_outs, logits, mlm_loss
 
     def inference(
         self,
@@ -843,3 +886,127 @@ class Transformer(AbsTTS):
             raise NotImplementedError("support only add or concat.")
 
         return hs
+
+    def _bert_mask(self, xs, ilens):
+        """Make masks for masked language modeling.
+
+        Following png bert implementation, we use the following mask scheme:
+            For 12% of tokens, we replace their token IDs with the mask id.
+            For another 1.5% of tokens, we replace their token IDs with a random token.
+            For another 1.5% of tokens, we do not perform masking or replacement.
+
+        Args:
+            xs (LongTensor): Batch of padded token ids (B, Tmax).
+            ilens (LongTensor): Batch of lengths (B,).
+
+        Returns:
+            Tensor: Mask tensor for masked language modeling.
+                    dtype=torch.uint8 in PyTorch 1.2-
+                    dtype=torch.bool in PyTorch 1.2+ (including 1.2)
+
+        Examples:
+            >>> ilens = [5, 3]
+            >>> self._source_mask(ilens)
+            tensor([[[1, 1, 1, 1, 1],
+                    [[1, 1, 1, 0, 0]]], dtype=torch.uint8)
+
+        """
+        src_mask = make_non_pad_mask(ilens).to(next(self.parameters()).device)
+        src_mask = src_mask.unsqueeze(-2)
+
+        rand_mat = torch.rand(xs.shape)
+        ratio = ilens / xs.shape[1]
+        rand_mat = rand_mat * ratio.unsqueeze(1)
+
+        rep_id = random.choice(range(self.mask_id+1, self.eos))
+        mask_mask = rand_mat < 0.12
+        mask_rep = (rand_mat > 0.12) & (rand_mat < 0.135)
+        mask_pos = (rand_mat < 0.150) * src_mask
+        xs_masked = xs.masked_fill_(mask_mask, self.mask_id)
+        xs_masked = xs_masked.masked_fill_(mask_rep, rep_id)
+        xs_masked *= xs_masked * src_mask 
+        return xs_masked, mask_pos
+
+
+class EncoderWithLid(Encoder):
+    def forward(self, xs, masks, lang_emb=None):
+        """Encode input sequence.
+        Args:
+            xs (torch.Tensor): Input tensor (#batch, time, idim).
+            masks (torch.Tensor): Mask tensor (#batch, time).
+            lang_emb (torch.Tensor): Language embedding (#batch, attention_dim).
+        Returns:
+            torch.Tensor: Output tensor (#batch, time, attention_dim).
+            torch.Tensor: Mask tensor (#batch, time).
+        """
+        if isinstance(
+            self.embed,
+            (Conv2dSubsampling, Conv2dSubsampling6, Conv2dSubsampling8, VGG2L),
+        ):
+            xs, masks = self.embed(xs, masks)
+        else:
+            xs = self.embed(xs)
+        
+        # Adding language embedding
+        if lang_emb:
+            xs = xs + lang_emb.unsqueeze(1)
+
+        if self.intermediate_layers is None:
+            xs, masks = self.encoders(xs, masks)
+        else:
+            intermediate_outputs = []
+            for layer_idx, encoder_layer in enumerate(self.encoders):
+                xs, masks = encoder_layer(xs, masks)
+
+                if (
+                    self.intermediate_layers is not None
+                    and layer_idx + 1 in self.intermediate_layers
+                ):
+                    encoder_output = xs
+                    # intermediate branches also require normalization.
+                    if self.normalize_before:
+                        encoder_output = self.after_norm(encoder_output)
+                    intermediate_outputs.append(encoder_output)
+
+                    if self.use_conditioning:
+                        intermediate_result = self.ctc_softmax(encoder_output)
+                        xs = xs + self.conditioning_layer(intermediate_result)
+
+        if self.normalize_before:
+            xs = self.after_norm(xs)
+
+        if self.intermediate_layers is not None:
+            return xs, masks, intermediate_outputs
+        return xs, masks
+
+    def forward_one_step(self, xs, masks, cache=None, lang_emb=None):
+        """Encode input frame.
+        Args:
+            xs (torch.Tensor): Input tensor.
+            masks (torch.Tensor): Mask tensor.
+            cache (List[torch.Tensor]): List of cache tensors.
+            lang_emb (torch.Tensor): Language embedding.
+        Returns:
+            torch.Tensor: Output tensor.
+            torch.Tensor: Mask tensor.
+            List[torch.Tensor]: List of new cache tensors.
+        """
+        if isinstance(self.embed, Conv2dSubsampling):
+            xs, masks = self.embed(xs, masks)
+        else:
+            xs = self.embed(xs)
+
+        # Adding language embedding to the embedded frame
+        if lang_emb:
+            xs = xs + lang_emb.unsqueeze(1)
+
+        if cache is None:
+            cache = [None for _ in range(len(self.encoders))]
+        new_cache = []
+        for c, e in zip(cache, self.encoders):
+            xs, masks = e(xs, masks, cache=c)
+            new_cache.append(xs)
+        if self.normalize_before:
+            xs = self.after_norm(xs)
+        return xs, masks, new_cache
+    

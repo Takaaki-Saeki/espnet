@@ -91,7 +91,7 @@ else
       id=$(basename $wav_file .wav)
       if [ "$mos_filt" = false ]; then
         echo "$id $wav_file" >>$wav_scp
-        txt=`python local/extract.py ${tsv_path} ${base}`
+        txt=`python3 local/extract.py ${tsv_path} ${base}`
         echo "$id $txt" >>$trans
         echo "$id $spk" >>$utt2spk
         echo "$id $lang" >>$utt2lang

@@ -40,7 +40,7 @@ elif [ "${train_type}" = multilingual ]; then
     if [ "${token_type}" = phn ]; then
         suffix="_phn"
     fi
-    train_config=conf/train_multilingual.yaml
+    train_config=conf/train_transformer_multilingual.yaml
 else
     log train_type: "${train_type} is not supported."
     exit 1

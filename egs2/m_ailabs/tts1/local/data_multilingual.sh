@@ -19,16 +19,24 @@ if [ $# -ne 0 ]; then
 fi
 
 stage=-1
-stop_stage=2
+stop_stage=3
 
 . ./path.sh || exit 1
 . ./cmd.sh || exit 1
 . ./db.sh || exit 1
 
-db_root=/home/saeki/workspace/ssd1/mailab/
+if [ -z "${M_AILABS}" ]; then
+    log "Fill the value of 'JSUT' of db.sh"
+    exit 1
+fi
+db_root=${M_AILABS}
 # silence part trimming related
 do_trimming=true
 nj=32
+do_filtering=true
+# Only valid when do_filtering=true
+mos_thresh="3.5"
+csv_path="nisqa_results.csv"
 
 token_type=byte
 
@@ -36,10 +44,14 @@ token_type=byte
 langs=("de_DE" "en_UK" "it_IT" "es_ES" "en_US" "fr_FR" "uk_UK" "ru_RU" "pl_PL")
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
-    log "stage -1: Downloading data"
-    for lang in ${langs[@]}; do
-        local/download.sh ${db_root} ${lang}
-    done
+    if [ -e ${db_root} ]; then
+        log "The dataset already exists. Skipping..."
+    else
+        log "stage -1: Downloading data"
+        for lang in ${langs[@]}; do
+            local/download.sh ${db_root} ${lang}
+        done
+    fi
 fi
 
 whole_set_all=""
@@ -51,6 +63,9 @@ suffix=""
 if [ "${token_type}" = phn ]; then
     suffix="_phn"
 fi
+
+out_all="data_all"
+out="data"
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     log "stage 0-1: Data preparation and division to subsets"
@@ -98,9 +113,9 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
             org_set=${lang}_${spkr}
 
             log "Processing ${lang}_${spkr}."
-            local/data_prep.sh ${db_root} ${lang} ${spkr} data/${org_set}
-            utils/fix_data_dir.sh data/${org_set}
-            utils/validate_data_dir.sh --no-feats data/${org_set}
+            local/data_prep.sh ${db_root} ${lang} ${spkr} ${out_all}/${org_set}
+            utils/fix_data_dir.sh ${out_all}/${org_set}
+            utils/validate_data_dir.sh --no-feats ${out_all}/${org_set}
 
             # Trim silence parts at the beginning and the end of audio
             if ${do_trimming}; then
@@ -113,18 +128,18 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
                     --shift_length 256 \
                     --threshold 60 \
                     --min_silence 0.01 \
-                    data/${org_set} \
-                    data/${org_set}/log
+                    ${out_all}/${org_set} \
+                    ${out_all}/${org_set}/log
             fi
 
             # Dump phoneme seq. because current espnet2 does not support multilingual g2p
             if [ "${token_type}" = phn ]; then
                 log "pyscripts/utils/convert_text_to_phn.py"
-                utils/copy_data_dir.sh "data/${org_set}" "data/${org_set}_phn"
+                utils/copy_data_dir.sh "${out_all}/${org_set}" "${out_all}/${org_set}_phn"
                 pyscripts/utils/convert_text_to_phn.py \
                     --g2p "${g2p}" --nj "${nj}" \
-                    "data/${org_set}/text" "data/${org_set}_phn/text"
-                utils/fix_data_dir.sh "data/${org_set}_phn"
+                    "${out_all}/${org_set}/text" "${out_all}/${org_set}_phn/text"
+                utils/fix_data_dir.sh "${out_all}/${org_set}_phn"
             fi
 
             # Making train, dev, and eval subsets for each ${lang}_${spkr}
@@ -134,17 +149,17 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
             eval_set="${whole_set}_eval"
 
             # Appending each data dir to combine them after all
-            whole_set_all="${whole_set_all} data/${whole_set}"
-            train_set_all="${train_set_all} data/${train_set}"
-            dev_set_all="${dev_set_all} data/${dev_set}"
-            eval_set_all="${eval_set_all} data/${eval_set}"
+            whole_set_all="${whole_set_all} ${out_all}/${whole_set}"
+            train_set_all="${train_set_all} ${out_all}/${train_set}"
+            dev_set_all="${dev_set_all} ${out_all}/${dev_set}"
+            eval_set_all="${eval_set_all} ${out_all}/${eval_set}"
 
-            utils/subset_data_dir.sh --last data/${whole_set} 50 data/${whole_set}_tmp
-            utils/subset_data_dir.sh --last data/${whole_set}_tmp 25 data/${dev_set}
-            utils/subset_data_dir.sh --first data/${whole_set}_tmp 25 data/${eval_set}
-            n=$(($(wc -l <data/${whole_set}/wav.scp) - 50))
-            utils/subset_data_dir.sh --first data/${whole_set} ${n} data/${train_set}
-            rm -rf data/${whole_set}_tmp
+            utils/subset_data_dir.sh --last ${out_all}/${whole_set} 50 ${out_all}/${whole_set}_tmp
+            utils/subset_data_dir.sh --last ${out_all}/${whole_set}_tmp 25 ${out_all}/${dev_set}
+            utils/subset_data_dir.sh --first ${out_all}/${whole_set}_tmp 25 ${out_all}/${eval_set}
+            n=$(($(wc -l <${out_all}/${whole_set}/wav.scp) - 50))
+            utils/subset_data_dir.sh --first ${out_all}/${whole_set} ${n} ${out_all}/${train_set}
+            rm -rf ${out_all}/${whole_set}_tmp
 
         done
     done
@@ -153,16 +168,29 @@ fi
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     log "stage 2: Combining all the languages and speakers"
     # Combining all the sets
-    utils/data/combine_data.sh data/whole${suffix} ${whole_set_all}
-    utils/data/combine_data.sh data/tr_no_dev${suffix} ${train_set_all}
-    utils/data/combine_data.sh data/dev${suffix} ${dev_set_all}
-    utils/data/combine_data.sh data/eval${suffix} ${eval_set_all}
+    utils/data/combine_data.sh ${out_all}/whole${suffix} ${whole_set_all}
+    utils/data/combine_data.sh ${out_all}/tr_no_dev${suffix} ${train_set_all}
+    utils/data/combine_data.sh ${out_all}/dev${suffix} ${dev_set_all}
+    utils/data/combine_data.sh ${out_all}/eval${suffix} ${eval_set_all}
 
     # Delete original filders
     rm -rf ${whole_set_all}
     rm -rf ${train_set_all}
     rm -rf ${dev_set_all}
     rm -rf ${eval_set_all}
+fi
+
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+    if ${do_trimming}; then
+        log "stage 3: Filtering data based on precomputed MOS."
+        python3 local/filter_data.py \
+            --ref_csv_path ${csv_path} \
+            --score_thresh ${mos_thresh} \
+            --in_dir ${out_all} \
+            --out_dir ${out}
+    else
+        cp -r ${out_all} ${out}
+    fi
 fi
 
 log "Successfully finished. [elapsed=${SECONDS}s]"

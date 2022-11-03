@@ -585,7 +585,8 @@ class Transformer(AbsTTS):
         x_masks = self._source_mask(ilens)
 
         # Applying bert mask
-        xs_masked, mask_pos = self._bert_mask(xs, ilens)
+        if self.use_mlm_loss:
+            xs_masked, mask_pos = self._bert_mask(xs, ilens)
 
         # Injecting language embedding inside the encoder
         if self.langs:
@@ -645,8 +646,8 @@ class Transformer(AbsTTS):
         
         if self.use_mlm_loss:
             mlm_loss = self.mlm_criterion(
-                torch.masked_select(hs, mask_pos),
-                torch.masked_select(hs_mlm, mask_pos))
+                torch.masked_select(hs, mask_pos.unsqueeze(-1)),
+                torch.masked_select(hs_mlm, mask_pos.unsqueeze(-1)))
         else:
             mlm_loss = torch.tensor(0.0).to(xs.device)
 
@@ -912,19 +913,21 @@ class Transformer(AbsTTS):
 
         """
         src_mask = make_non_pad_mask(ilens).to(next(self.parameters()).device)
-        src_mask = src_mask.unsqueeze(-2)
 
-        rand_mat = torch.rand(xs.shape)
+        rand_mat = torch.rand(xs.shape).to(next(self.parameters()).device)
         ratio = ilens / xs.shape[1]
         rand_mat = rand_mat * ratio.unsqueeze(1)
+        # Not masking <eos> token
+        rand_mat[xs == self.eos] = 1.0
 
-        rep_id = random.choice(range(self.mask_id+1, self.eos))
+        rep_id = random.choice(range(self.mask+1, self.eos))
         mask_mask = rand_mat < 0.12
         mask_rep = (rand_mat > 0.12) & (rand_mat < 0.135)
         mask_pos = (rand_mat < 0.150) * src_mask
-        xs_masked = xs.masked_fill_(mask_mask, self.mask_id)
+        xs_masked = xs.masked_fill_(mask_mask, self.mask)
         xs_masked = xs_masked.masked_fill_(mask_rep, rep_id)
-        xs_masked *= xs_masked * src_mask 
+        xs_masked = xs_masked * src_mask
+
         return xs_masked, mask_pos
 
 
@@ -948,7 +951,7 @@ class EncoderWithLid(Encoder):
             xs = self.embed(xs)
         
         # Adding language embedding
-        if lang_emb:
+        if lang_emb is not None:
             xs = xs + lang_emb.unsqueeze(1)
 
         if self.intermediate_layers is None:

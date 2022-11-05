@@ -181,7 +181,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    if ${do_trimming}; then
+    if ${do_filtering}; then
         log "stage 3: Filtering data based on precomputed MOS."
         python3 local/filter_data.py \
             --ref_csv_path ${csv_path} \

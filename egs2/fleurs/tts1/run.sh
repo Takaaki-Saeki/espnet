@@ -45,7 +45,7 @@ test_sets=test
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --use_xvector true \
-    --xvector_tool speechbrain \
+    --xvector_tool rawnet \
     --token_type "${token_type}" \
     --cleaner "${cleaner}" \
     --g2p "${g2p}" \

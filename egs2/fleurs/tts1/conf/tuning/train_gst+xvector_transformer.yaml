@@ -27,7 +27,7 @@ tts_conf:                  # keyword arguments for the selected model
     postnet_layers: 5                # number of layers of postnset
     postnet_filts: 5                 # filter size of conv layers in postnet
     postnet_chans: 256               # number of channels of conv layers in postnet
-    spk_embed_dim: 192               # dimension of speaker embedding
+    spk_embed_dim: 256               # dimension of speaker embedding
     spk_embed_integration_type: add  # how to integrate speaker embedding
     use_gst: true                    # whether to use GST embedding
     gst_heads: 4                     # number of heads in GST multi-head attention

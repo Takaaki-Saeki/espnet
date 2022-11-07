@@ -15,6 +15,8 @@ src=$1 # dir path to dataset
 dst=$2 # destination (e.g., data/dev)
 setname=`basename ${dst}` # train, dev, test
 
+spk_label_dir=spk_label
+
 # Performing language filtering
 langs=""
 if [ "$3" = true ]; then
@@ -31,17 +33,19 @@ if [ "$3" = true ]; then
     langs+=("${langs_all[cnt]}")
     cnt=$((cnt+1))
   done
-  log ${langs[@]}
+  log "Language list: ${langs[@]}"
 else
   lang_filt=false
 fi
 
 # Performing MOS filtering
-if [ "$5" = true ]; then
+if [ "$5" = true ] && [ "${setname}" = "train" ]; then
+  log "Enabling MOS filtering."
   mos_filt=true
   mos_filt_thresh=$6
   mos_filt_thresh=${mos_filt_thresh//./}
 else
+  log "Disabling MOS filtering."
   mos_filt=false
 fi
 
@@ -66,9 +70,8 @@ else
     # Language filtering
     if [ "$lang_filt" = true ]; then
       if [[ " ${langs[@]} " =~ " ${lang} " ]]; then
-        log "Language filtering: ${lang} is in the list of languages to be filtered."
+        log "Language filtering: ${lang} is in the list of languages."
       else
-        log "Language filtering: ${lang} is not in the list of languages to be filtered."
         continue
       fi
     fi
@@ -82,29 +85,30 @@ else
         exit 1
       fi
     fi
-    spk=DUMMY
     [ ! -f $tsv_path ] && echo "$0: expected file $tsv_path to exist" && exit 1
     [ ! -d $audio_dir ] && echo "$0: expected directory $audio_dir to exist" && exit 1
-    echo "Processing ${lang}, ${setname} set ..."
+    log "Processing ${lang}, ${setname} set ..."
     find -L $audio_dir/ -iname "*.wav" | sort | while read -r wav_file; do
       base=`basename $wav_file`
       id=$(basename $wav_file .wav)
+      spk=`grep "$id" "$spk_label_dir/${lang}/utt2spk"| awk '{ print $2 }'`
+      uttid="${spk}_${id}"
       if [ "$mos_filt" = false ]; then
-        echo "$id $wav_file" >>$wav_scp
+        echo "$uttid $wav_file" >>$wav_scp
         txt=`python3 local/extract.py ${tsv_path} ${base}`
-        echo "$id $txt" >>$trans
-        echo "$id $spk" >>$utt2spk
-        echo "$id $lang" >>$utt2lang
+        echo "$uttid $txt" >>$trans
+        echo "$uttid $spk" >>$utt2spk
+        echo "$uttid $lang" >>$utt2lang
       elif [ "$(grep ${id}.wav ${csv_path})" != "" ]; then
-        log "${id}.wav is in ${csv_path}!!!"
-        echo "$id $wav_file" >>$wav_scp
-        txt=`python local/extract.py ${tsv_path} ${base}`
-        echo "$id $txt" >>$trans
-        echo "$id $spk" >>$utt2spk
-        echo "$id $lang" >>$utt2lang
+        echo "$uttid $wav_file" >>$wav_scp
+        txt=`python3 local/extract.py ${tsv_path} ${base}`
+        echo "$uttid $txt" >>$trans
+        echo "$uttid $spk" >>$utt2spk
+        echo "$uttid $lang" >>$utt2lang
       fi
     done
   done
+  #sort -o $utt2spk $utt2spk -k2
 
   spk2utt=$dst/spk2utt
   utils/utt2spk_to_spk2utt.pl <$utt2spk >$spk2utt || exit 1

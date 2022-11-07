@@ -397,6 +397,22 @@ if ! "${skip_data_prep}"; then
                         >"${data_feats}${_suf}/${dset}/wav.scp"
                     utils/fix_data_dir.sh "${data_feats}${_suf}/${dset}"
                 done
+            elif [ "${xvector_tool}" = "rawnet" ]; then
+                # Using RawNet to extract x-vector
+                # https://github.com/Jungjee/RawNet
+                log "Stage 2+: Extract X-vector: data/ -> ${dumpdir}/xvector using python toolkits"
+                for dset in "${train_set}" "${valid_set}" ${test_sets}; do
+                    if [ "${dset}" = "${train_set}" ] || [ "${dset}" = "${valid_set}" ]; then
+                        _suf="/org"
+                    else
+                        _suf=""
+                    fi
+                    pyscripts/utils/extract_xvectors.py \
+                        --pretrained_model "RawNet" \
+                        --toolkit "${xvector_tool}" \
+                        ${data_feats}${_suf}/${dset} \
+                        ${dumpdir}/xvector/${dset}
+                done
             else
                 # Assume that others toolkits are python-based
                 log "Stage 2+: Extract X-vector: data/ -> ${dumpdir}/xvector using python toolkits"

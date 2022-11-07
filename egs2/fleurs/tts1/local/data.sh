@@ -21,7 +21,7 @@ nj=32
 lang_filt=true
 lang_filt_top=10
 mos_filt=true
-mos_filt_thresh=4.0
+mos_filt_thresh=3.5
 
 log "$0 $*"
 . utils/parse_options.sh
@@ -47,7 +47,7 @@ fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage 0: local/data_prep.sh"
-    for setname in train test dev; do
+    for setname in test dev train; do
         local/data_prep.sh \
             "${db_root}" \
             "data/${setname}" \
@@ -58,7 +58,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     done
 fi
 
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ] && [ ${do_trimming} ]; then
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ] && [ "${do_trimming}" = true ]; then
     log "stage 1: scripts/audio/trim_silence.sh"
     for setname in test dev train; do
         scripts/audio/trim_silence.sh \

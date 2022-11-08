@@ -46,7 +46,9 @@ else
     exit 1
 fi
 
-local_data_opts+=" --train_type ${train_type}"
+do_filtering=false
+
+local_data_opts+=" --train_type ${train_type} --do_filtering ${do_filtering}"
 
 train_set=tr_no_dev${suffix}
 valid_set=dev${suffix}

@@ -18,8 +18,8 @@ fs=16000
 do_trimming=true
 nj=32
 # Options for dataset filtering
-lang_filt=true
-lang_filt_top=10
+lang_filt=false
+lang_filt_top=30
 mos_filt=true
 mos_filt_thresh=3.5
 

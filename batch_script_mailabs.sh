@@ -36,11 +36,15 @@ share_storage="/$HOME/share-storage/dataset"
 # mkdir -p ${target_dataset_root}
 # cp -r /$HOME/share-storage/dataset/mailab.tar.gz ${target_dataset_root}/
 # tar -zxvf ${target_dataset_root}/mailab.tar.gz -C ${target_dataset_root} --remove-files
-tar -zxvf "${share_storage}/mailab.tar.gz" -C "${share_storage}"
+# tar -zxvf "${share_storage}/mailab.tar.gz" -C "${share_storage}"
 # echo "Successfully copied datasets"
 
 # Specifying the dataset path
-egs_dir=egs2/m_ailabs/tts1
+## tts1: filtering with MOS3.5
+## tts2: No filtering
+case_name="tts2"
+
+egs_dir=egs2/m_ailabs/${case_name}
 dataset_name=mailab
 target_dataset="${share_storage}/${dataset_name}"
 cd ${egs_dir}
@@ -50,4 +54,7 @@ sed -i -e "s@${db_name}.*@${db_name}=${target_dataset}@g" "${db_path}"
 cat ${db_path}
 
 # Running training
-./run.sh --stage 1 --stop-stage 1 --dumpdir "${localdir}/dump"
+./run_byte.sh --stage 2 --stop-stage 6 \
+--dumpdir "${localdir}/dump" \
+--expdir "exp_nofilt" \
+--ngpu 4

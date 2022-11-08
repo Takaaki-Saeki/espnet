@@ -27,20 +27,22 @@ dir=`pwd`; log "Current dir: ${dir}"
 
 # Set up dir paths
 localdir="${SGE_LOCALDIR}"
-target_dataset_root="${localdir}/dataset"
-rm -rf ${target_dataset_root}
+#target_dataset_root="${localdir}/dataset"
+#rm -rf ${target_dataset_root}
 
 # Copying data to working directory
-log "Copying data to ${localdir} ..."
-mkdir -p ${target_dataset_root}
-cp -r /$HOME/share-storage/dataset/fleurs_16k_16b.tar.gz ${target_dataset_root}/
-tar -zxvf ${target_dataset_root}/fleurs_16k_16b.tar.gz -C ${target_dataset_root} --remove-files
-echo "Successfully copied datasets"
+#log "Copying data to ${localdir} ..."
+#mkdir -p ${target_dataset_root}
+#cp -r /$HOME/share-storage/dataset/fleurs_16k_16b.tar.gz ${target_dataset_root}/
+#tar -zxvf ${target_dataset_root}/fleurs_16k_16b.tar.gz -C ${target_dataset_root} --remove-files
+#echo "Successfully copied datasets"
+
+share_storage="/$HOME/share-storage/dataset"
 
 # Specifying the dataset path
 egs_dir=egs2/fleurs/tts1
 dataset_name=fleurs_16k_16b
-target_dataset="${target_dataset_root}/${dataset_name}"
+target_dataset="${share_storage}/${dataset_name}"
 cd ${egs_dir}
 db_name=FLEURS
 db_path=db.sh
@@ -49,4 +51,7 @@ sed -i -e "s@${db_name}.*@${db_name}=${target_dataset}@g" "${db_path}"
 cat ${db_path}
 
 # Running training
-./run.sh --stage 1 --stop-stage 1
+./run.sh \
+--stage 1 --stop-stage 2 \
+--dumpdir "${localdir}/dump" \
+--ngpu 1

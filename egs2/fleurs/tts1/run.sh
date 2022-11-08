@@ -9,9 +9,10 @@ fs=16000
 n_fft=1024
 n_shift=256
 lang_filt=false
-mos_filt=false
+mos_filt=true
+mos_filt_thresh=3.5
 
-local_data_opts+=" --fs ${fs} --lang_filt ${lang_filt} --mos_filt ${mos_filt}"
+local_data_opts+=" --fs ${fs} --lang_filt ${lang_filt} --mos_filt ${mos_filt} --mos_filt_thresh ${mos_filt_thresh}"
 
 opts=
 if [ "${fs}" -eq 22050 ]; then

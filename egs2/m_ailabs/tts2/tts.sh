@@ -1,1 +1,1 @@
-../../TEMPLATE/tts1/tts.sh
+../tts1/tts.sh

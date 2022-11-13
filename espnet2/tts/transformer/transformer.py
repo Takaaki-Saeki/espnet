@@ -584,16 +584,9 @@ class Transformer(AbsTTS):
         if self.use_mlm_loss:
             xs_masked, mask_pos = self._bert_mask(xs, ilens)
 
-        # Injecting language embedding inside the encoder
-        if self.langs:
-            lid_embs = self.lid_emb(lids.view(-1))
-            hs, h_masks = self.encoder(xs, x_masks, lid_embs)
-            if self.use_mlm_loss:
-                hs_mlm, _ = self.encoder(xs_masked, x_masks, lid_embs)
-        else:
-            hs, h_masks = self.encoder(xs, x_masks)
-            if self.use_mlm_loss:
-                hs_mlm, _ = self.encoder(xs_masked, x_masks)
+        hs, h_masks = self.encoder(xs, x_masks)
+        if self.use_mlm_loss:
+            hs_mlm, _ = self.encoder(xs_masked, x_masks)
 
         # integrate with GST
         if self.use_gst:

@@ -280,12 +280,8 @@ class Transformer(AbsTTS):
             self.langs = langs
             self.lid_emb = torch.nn.Embedding(langs, adim)
 
-        if self.langs:
-            encoder_cls = EncoderWithLid
-        else:
-            encoder_cls = Encoder
-        
-        self.encoder = encoder_cls(
+        # Not using EncoderLid.
+        self.encoder = Encoder(
             idim=idim,
             attention_dim=adim,
             attention_heads=aheads,
@@ -609,9 +605,9 @@ class Transformer(AbsTTS):
             sid_embs = self.sid_emb(sids.view(-1))
             hs = hs + sid_embs.unsqueeze(1)
         
-        # if self.langs is not None:
-        #    lid_embs = self.lid_emb(lids.view(-1))
-        #    hs = hs + lid_embs.unsqueeze(1)
+        if self.langs is not None:
+            lid_embs = self.lid_emb(lids.view(-1))
+            hs = hs + lid_embs.unsqueeze(1)
 
         # integrate speaker embedding
         if self.spk_embed_dim is not None:

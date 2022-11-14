@@ -35,7 +35,7 @@ do_trimming=true
 nj=32
 do_filtering=true
 # Only valid when do_filtering=true
-mos_thresh="3.5"
+mos_thresh="3.0"
 csv_path="nisqa_results.csv"
 
 token_type=byte
@@ -67,7 +67,7 @@ fi
 out_all="data_all"
 out="data"
 
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ] && [ ! -e ${out_all} ]; then
     log "stage 0-1: Data preparation and division to subsets"
 
     for lang in ${langs[@]}; do
@@ -165,7 +165,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     done
 fi
 
-if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ] && [ ! -e ${out_all} ]; then
     log "stage 2: Combining all the languages and speakers"
     # Combining all the sets
     utils/data/combine_data.sh ${out_all}/whole${suffix} ${whole_set_all}
@@ -180,7 +180,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     rm -rf ${eval_set_all}
 fi
 
-if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ] && [ ! -e ${out} ]; then
     if ${do_filtering}; then
         log "stage 3: Filtering data based on precomputed MOS."
         python3 local/filter_data.py \

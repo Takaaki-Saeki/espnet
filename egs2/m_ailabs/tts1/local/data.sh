@@ -16,15 +16,12 @@ log "$0 $*"
 do_filtering=true
 train_type=multilingual
 
-log "train_type: ${train_type}"
-log "do_filtering: ${do_filtering}"
-
 if [ "${train_type}" = en_us ]; then
     # Training the model only on en_US
     local/data_en_us.sh
 elif [ "${train_type}" = multilingual ]; then
     # Training the model on the whole dataset
-    local/data_multilingual.sh --do_filtering "${do_filtering}"
+    local/data_multilingual.sh
 else
     log "train_type: ${train_type} is not supported."
     exit 1

@@ -52,6 +52,6 @@ cat ${db_path}
 
 # Running training
 ./run.sh \
---stage 1 --stop-stage 2 \
+--stage 2 --stop-stage 6 \
 --dumpdir "${localdir}/dump" \
---ngpu 1
+--ngpu 4

@@ -18,9 +18,11 @@ tts_conf:                  # keyword arguments for the selected model
     dprenet_units: 256     # number of units in decoder prenet
     adim: 512              # attention dimension
     aheads: 8              # number of attention heads
-    elayers: 6             # number of encoder layers
+    # elayers: 6             # number of encoder layers
+    elayers: 8             # number of encoder layers
     eunits: 1024           # number of encoder ff units
-    dlayers: 6             # number of decoder layers
+    dlayers: 8             # number of decoder layers
+    # dlayers: 6             # number of decoder layers
     dunits: 1024           # number of decoder ff units
     positionwise_layer_type: conv1d  # type of position-wise layer
     positionwise_conv_kernel_size: 1 # kernel size of position wise conv layer
@@ -72,10 +74,12 @@ scheduler_conf:         # keyword arguments for selected scheduler
 ##########################################################
 num_iters_per_epoch: 4000   # number of iterations per epoch
 max_epoch: 500              # number of epochs
-grad_clip: 1.0              # gradient clipping norm
+grad_clip: 2.0              # gradient clipping norm
+# grad_clip: 1.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 2               # gradient accumulation
-batch_bins: 4000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
+batch_bins: 3000000         # batch bins (4GPU)
+#batch_bins: 1000000         # batch bins (1GPU)
 batch_type: numel           # how to make batch
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
@@ -83,7 +87,7 @@ num_workers: 1              # number of workers of data loader
 train_dtype: float32        # dtype in training
 log_interval: null          # log interval in iterations
 keep_nbest_models: 5        # number of models to keep
-num_att_plot: 3             # number of attention figures to be saved in every check
+num_att_plot: 1             # number of attention figures to be saved in every check
 seed: 0                     # random seed number
 best_model_criterion:
 -   - valid

@@ -42,7 +42,7 @@ share_storage="/$HOME/share-storage/dataset"
 # Specifying the dataset path
 ## tts1: filtering with MOS3.5
 ## tts2: No filtering
-case_name="tts2"
+case_name="tts1"
 
 egs_dir=egs2/m_ailabs/${case_name}
 dataset_name=mailab
@@ -56,5 +56,4 @@ cat ${db_path}
 # Running training
 ./run_byte.sh --stage 2 --stop-stage 6 \
 --dumpdir "${localdir}/dump" \
---expdir "exp_nofilt" \
 --ngpu 4

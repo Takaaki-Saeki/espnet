@@ -58,7 +58,7 @@ MINI_LIBRISPEECH=downloads
 MISP2021=
 L3DAS22=
 LIBRIMIX=downloads
-LIBRITTS=
+LIBRITTS=/home/saeki/workspace/hdd1/LibriTTS
 LJSPEECH=downloads
 MUSAN=
 MUST_C=downloads
@@ -80,7 +80,7 @@ TSUKUYOMI=downloads
 VOXFORGE=downloads
 AMI=
 COMMONVOICE=downloads
-FLEURS=downloads
+FLEURS=/home/saeki/workspace/ssd1/fleurs_16k_16b
 MICROSOFT_SPEECH_CORPUS=
 BABEL_101=
 BABEL_102=
@@ -158,7 +158,8 @@ HARPERVALLEY=downloads
 TALROMUR=downloads
 DCASE=
 TEDX_SPANISH=downloads
-M_AILABS=downloads
+M_AILABS=/home/saeki/workspace/ssd1/mailab
+MASMULTTS=/home/saeki/workspace/ssd1/MasMulTTS
 
 # For only CMU TIR environment
 if [[ "$(hostname)" == tir* ]]; then
@@ -241,7 +242,7 @@ if [[ "$(hostname -d)" == clsp.jhu.edu ]]; then
     SLURP=
     MEDIASPEECH=downloads
     MINI_LIBRISPEECH=downloads
-    LIBRITTS=
+    LIBRITTS=/home/saeki/workspace/hdd1/LibriTTS
     LJSPEECH=downloads
     JMD=downloads
     JSSS=downloads

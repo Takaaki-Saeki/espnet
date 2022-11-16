@@ -2,6 +2,7 @@ import pathlib
 import argparse
 import numpy as np
 import os
+import string
 from collections import defaultdict
 
 def langtable_mailabs():
@@ -112,8 +113,10 @@ class DataProcessor:
                 spk = line_list[3]
                 text = line_list[4]
                 if self.token_type == "byte":
-                    text = text.upper().replace("\u3000", " ")
-                    text = ''.join(c for c in text if c.isprintable())
+                    text = text.upper()
+                    # Removing invalid characters
+                    text = text.replace("\u3000", " ")
+                    text = filter(lambda x: x in string.printable, text)
                 if self.langtable is not None:
                     lang = self.langtable[lang]
                 if self.lang_set is not None:

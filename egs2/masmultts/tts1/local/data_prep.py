@@ -113,6 +113,7 @@ class DataProcessor:
                 text = line_list[4]
                 if self.token_type == "byte":
                     text = text.upper().replace("\u3000", " ")
+                    text = ''.join(c for c in text if c.isprintable())
                 if self.langtable is not None:
                     lang = self.langtable[lang]
                 if self.lang_set is not None:

@@ -117,7 +117,9 @@ class Transformer(AbsTTS):
         modules_applied_guided_attn: Sequence[str] = ("encoder-decoder"),
         guided_attn_loss_sigma: float = 0.4,
         guided_attn_loss_lambda: float = 1.0,
-        use_mlm_loss: bool = False
+        use_mlm_loss: bool = False,
+        lang_family_encoding: bool = False,
+        num_lang_family: int = -1,
     ):
         """Initialize Transformer module.
 
@@ -248,54 +250,105 @@ class Transformer(AbsTTS):
             ScaledPositionalEncoding if self.use_scaled_pos_enc else PositionalEncoding
         )
 
-        # define transformer encoder
-        if eprenet_conv_layers != 0:
-            # encoder prenet
-            encoder_input_layer = torch.nn.Sequential(
-                EncoderPrenet(
-                    idim=idim,
-                    embed_dim=embed_dim,
-                    elayers=0,
-                    econv_layers=eprenet_conv_layers,
-                    econv_chans=eprenet_conv_chans,
-                    econv_filts=eprenet_conv_filts,
-                    use_batch_norm=use_batch_norm,
-                    dropout_rate=eprenet_dropout_rate,
-                    padding_idx=self.padding_idx,
-                ),
-                torch.nn.Linear(eprenet_conv_chans, adim),
-            )
+        if not lang_family_encoding:
+            self.lang_family_encoding = lang_family_encoding
+            # define transformer encoder
+            if eprenet_conv_layers != 0:
+                # encoder prenet
+                encoder_input_layer = torch.nn.Sequential(
+                    EncoderPrenet(
+                        idim=idim,
+                        embed_dim=embed_dim,
+                        elayers=0,
+                        econv_layers=eprenet_conv_layers,
+                        econv_chans=eprenet_conv_chans,
+                        econv_filts=eprenet_conv_filts,
+                        use_batch_norm=use_batch_norm,
+                        dropout_rate=eprenet_dropout_rate,
+                        padding_idx=self.padding_idx,
+                    ),
+                    torch.nn.Linear(eprenet_conv_chans, adim),
+                )
+            else:
+                encoder_input_layer = torch.nn.Embedding(
+                    num_embeddings=idim, embedding_dim=adim, padding_idx=self.padding_idx
+                )
+
+            # define spk and lang embedding
+            self.spks = None
+            if spks is not None and spks > 1:
+                self.spks = spks
+                self.sid_emb = torch.nn.Embedding(spks, adim)
+            self.langs = None
+            if langs is not None and langs > 1:
+                self.langs = langs
+                self.lid_emb = torch.nn.Embedding(langs, adim)
+
+            # Not using EncoderLid.
+            self.encoder = Encoder(
+                idim=idim,
+                attention_dim=adim,
+                attention_heads=aheads,
+                linear_units=eunits,
+                num_blocks=elayers,
+                input_layer=encoder_input_layer,
+                dropout_rate=transformer_enc_dropout_rate,
+                positional_dropout_rate=transformer_enc_positional_dropout_rate,
+                attention_dropout_rate=transformer_enc_attn_dropout_rate,
+                pos_enc_class=pos_enc_class,
+                normalize_before=encoder_normalize_before,
+                concat_after=encoder_concat_after,
+                positionwise_layer_type=positionwise_layer_type,
+                positionwise_conv_kernel_size=positionwise_conv_kernel_size)
         else:
-            encoder_input_layer = torch.nn.Embedding(
-                num_embeddings=idim, embedding_dim=adim, padding_idx=self.padding_idx
-            )
+            # Using separate encoder for language family
+            self.lang_family_encoding = lang_family_encoding
+            self.num_lang_family = num_lang_family
+            encoder_list = []
+            for _ in range(num_lang_family):
+                if eprenet_conv_layers != 0:
+                    # encoder prenet
+                    encoder_input_layer = torch.nn.Sequential(
+                        EncoderPrenet(
+                            idim=idim,
+                            embed_dim=embed_dim,
+                            elayers=0,
+                            econv_layers=eprenet_conv_layers,
+                            econv_chans=eprenet_conv_chans,
+                            econv_filts=eprenet_conv_filts,
+                            use_batch_norm=use_batch_norm,
+                            dropout_rate=eprenet_dropout_rate,
+                            padding_idx=self.padding_idx,
+                        ),
+                        torch.nn.Linear(eprenet_conv_chans, adim),
+                    )
+                else:
+                    encoder_input_layer = torch.nn.Embedding(
+                        num_embeddings=idim, embedding_dim=adim, padding_idx=self.padding_idx
+                    )
+                encoder_list.append(Encoder(
+                    idim=idim,
+                    attention_dim=adim,
+                    attention_heads=aheads,
+                    linear_units=eunits,
+                    num_blocks=elayers,
+                    input_layer=encoder_input_layer,
+                    dropout_rate=transformer_enc_dropout_rate,
+                    positional_dropout_rate=transformer_enc_positional_dropout_rate,
+                    attention_dropout_rate=transformer_enc_attn_dropout_rate,
+                    pos_enc_class=pos_enc_class,
+                    normalize_before=encoder_normalize_before,
+                    concat_after=encoder_concat_after,
+                    positionwise_layer_type=positionwise_layer_type,
+                    positionwise_conv_kernel_size=positionwise_conv_kernel_size))
+            self.encoder = torch.nn.ModuleList(encoder_list)
 
-        # define spk and lang embedding
-        self.spks = None
-        if spks is not None and spks > 1:
-            self.spks = spks
-            self.sid_emb = torch.nn.Embedding(spks, adim)
-        self.langs = None
-        if langs is not None and langs > 1:
-            self.langs = langs
-            self.lid_emb = torch.nn.Embedding(langs, adim)
-
-        # Not using EncoderLid.
-        self.encoder = Encoder(
-            idim=idim,
-            attention_dim=adim,
-            attention_heads=aheads,
-            linear_units=eunits,
-            num_blocks=elayers,
-            input_layer=encoder_input_layer,
-            dropout_rate=transformer_enc_dropout_rate,
-            positional_dropout_rate=transformer_enc_positional_dropout_rate,
-            attention_dropout_rate=transformer_enc_attn_dropout_rate,
-            pos_enc_class=pos_enc_class,
-            normalize_before=encoder_normalize_before,
-            concat_after=encoder_concat_after,
-            positionwise_layer_type=positionwise_layer_type,
-            positionwise_conv_kernel_size=positionwise_conv_kernel_size)
+            # Define spk embedding and not use language embedding
+            self.spks = None
+            if spks is not None and spks > 1:
+                self.spks = spks
+                self.sid_emb = torch.nn.Embedding(spks, adim)
+            self.langs = None
 
         # define GST
         if self.use_gst:
@@ -399,7 +452,11 @@ class Transformer(AbsTTS):
 
         # initialize alpha in scaled positional encoding
         if self.use_scaled_pos_enc:
-            self.encoder.embed[-1].alpha.data = torch.tensor(init_enc_alpha)
+            if not self.lang_family_encoding:
+                self.encoder.embed[-1].alpha.data = torch.tensor(init_enc_alpha)
+            else:
+                for idx in range(self.num_lang_family):
+                    self.encoder[idx].embed[-1].alpha.data = torch.tensor(init_enc_alpha)
             self.decoder.embed[-1].alpha.data = torch.tensor(init_dec_alpha)
 
     def forward(
@@ -501,19 +558,38 @@ class Transformer(AbsTTS):
         if self.use_guided_attn_loss:
             # calculate for encoder
             if "encoder" in self.modules_applied_guided_attn:
-                att_ws = []
-                for idx, layer_idx in enumerate(
-                    reversed(range(len(self.encoder.encoders)))
-                ):
-                    att_ws += [
-                        self.encoder.encoders[layer_idx].self_attn.attn[
-                            :, : self.num_heads_applied_guided_attn
+                if not self.lang_family_encoding:
+                    att_ws = []
+                    for idx, layer_idx in enumerate(
+                        reversed(range(len(self.encoder.encoders)))
+                    ):
+                        att_ws += [
+                            self.encoder.encoders[layer_idx].self_attn.attn[
+                                :, : self.num_heads_applied_guided_attn
+                            ]
                         ]
-                    ]
-                    if idx + 1 == self.num_layers_applied_guided_attn:
-                        break
-                att_ws = torch.cat(att_ws, dim=1)  # (B, H*L, T_text, T_text)
-                enc_attn_loss = self.attn_criterion(att_ws, ilens, ilens)
+                        if idx + 1 == self.num_layers_applied_guided_attn:
+                            break
+                    att_ws = torch.cat(att_ws, dim=1)  # (B, H*L, T_text, T_text)
+                    enc_attn_loss = self.attn_criterion(att_ws, ilens, ilens)
+                else:
+                    enc_attn_loss = torch.zeros_like(loss)
+                    idxes = [int(x) for x in torch.unique(lids).tolist()]
+                    for lidx in idxes:
+                        att_ws = []
+                        for idx, layer_idx in enumerate(
+                            reversed(range(len(self.encoder[lidx].encoders)))
+                        ):
+                            att_ws += [
+                                self.encoder[lidx].encoders[layer_idx].self_attn.attn[
+                                    :, : self.num_heads_applied_guided_attn
+                                ]
+                            ]
+                            if idx + 1 == self.num_layers_applied_guided_attn:
+                                break
+                        att_ws = torch.cat(att_ws, dim=1)  # (B, H*L, T_text, T_text)
+                        enc_attn_loss += self.attn_criterion(att_ws, ilens, ilens)
+                    enc_attn_loss /= len(idxes)
                 loss = loss + enc_attn_loss
                 stats.update(enc_attn_loss=enc_attn_loss.item())
             # calculate for decoder
@@ -553,10 +629,21 @@ class Transformer(AbsTTS):
 
         # report extra information
         if self.use_scaled_pos_enc:
-            stats.update(
-                encoder_alpha=self.encoder.embed[-1].alpha.data.item(),
-                decoder_alpha=self.decoder.embed[-1].alpha.data.item(),
-            )
+            if not self.lang_family_encoding:
+                stats.update(
+                    encoder_alpha=self.encoder.embed[-1].alpha.item(),
+                    decoder_alpha=self.decoder.embed[-1].alpha.item(),
+                )
+            else:
+                encoder_alpha = 0.
+                idxes = [int(x) for x in torch.unique(lids).tolist()]
+                for lidx in idxes:
+                    encoder_alpha += self.encoder[lidx].embed[-1].alpha.item()
+                encoder_alpha /= len(idxes)
+                stats.update(
+                    encoder_alpha=encoder_alpha,
+                    decoder_alpha=self.decoder.embed[-1].alpha.item(),
+                )
 
         if not joint_training:
             stats.update(loss=loss.item())
@@ -584,7 +671,11 @@ class Transformer(AbsTTS):
         if self.use_mlm_loss:
             xs_masked, mask_pos = self._bert_mask(xs, ilens)
 
-        hs, h_masks = self.encoder(xs, x_masks)
+        if self.lang_family_encoding:
+            hs, h_masks = self._multiple_encoding(xs, x_masks, lids)
+        else:
+            hs, h_masks = self.encoder(xs, x_masks)
+
         if self.use_mlm_loss:
             hs_mlm, _ = self.encoder(xs_masked, x_masks)
 
@@ -641,6 +732,24 @@ class Transformer(AbsTTS):
             mlm_loss = torch.tensor(0.0).to(xs.device)
 
         return after_outs, before_outs, logits, mlm_loss
+
+
+    def _multiple_encoding(
+        self, xs: torch.Tensor, x_masks: torch.Tensor, lids: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # forward encoder
+        for i, idx in enumerate(
+            [int(x) for x in torch.unique(lids).tolist()]
+        ):
+            if i == 0:
+                hs_tmp, h_masks = self.encoder[idx](xs, x_masks)
+                hs_out = torch.zeros_like(hs_tmp)
+            else:
+                hs_tmp, _ = self.encoder[idx](xs, x_masks)
+            mask = (lids == idx).unsqueeze(-1)
+            hs_out += (hs_tmp * mask)
+        return hs_out, h_masks
+
 
     def inference(
         self,
@@ -711,7 +820,10 @@ class Transformer(AbsTTS):
 
         # forward encoder
         xs = x.unsqueeze(0)
-        hs, _ = self.encoder(xs, None)
+        if self.lang_family_encoding:
+            hs, _ = self._multiple_encoding(xs, None, lids)
+        else:
+            hs, _ = self.encoder(xs, None)
 
         # integrate GST
         if self.use_gst:
@@ -1001,4 +1113,3 @@ class EncoderWithLid(Encoder):
         if self.normalize_before:
             xs = self.after_norm(xs)
         return xs, masks, new_cache
-    

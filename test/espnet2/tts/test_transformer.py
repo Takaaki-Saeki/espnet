@@ -13,8 +13,8 @@ from espnet2.tts.transformer import Transformer
     [(None, "add"), (2, "add"), (2, "concat")],
 )
 @pytest.mark.parametrize(
-    "spks, langs, use_gst",
-    [(-1, -1, False), (5, 2, True)],
+    "spks, langs, use_gst, lang_family_encoding, num_lang_family",
+    [(-1, -1, False, False, -1), (10, 7, True, True, 7)],
 )
 @pytest.mark.parametrize(
     "use_guided_attn_loss, modules_applied_guided_attn",
@@ -33,6 +33,8 @@ def test_tranformer(
     spk_embed_dim,
     spk_embed_integration_type,
     use_gst,
+    lang_family_encoding,
+    num_lang_family,
     use_guided_attn_loss,
     modules_applied_guided_attn,
 ):
@@ -74,6 +76,8 @@ def test_tranformer(
         loss_type="L1",
         use_guided_attn_loss=use_guided_attn_loss,
         modules_applied_guided_attn=modules_applied_guided_attn,
+        lang_family_encoding=lang_family_encoding,
+        num_lang_family=num_lang_family
     )
 
     inputs = dict(

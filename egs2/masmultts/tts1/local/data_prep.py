@@ -5,6 +5,47 @@ import os
 import string
 from collections import defaultdict
 
+def lang2group():
+    return {
+        "ast_es": "western_european_we", "bs_ba": "western_european_we", "ca_es": "western_european_we",
+        "hr_hr": "western_european_we", "da_dk": "western_european_we", "nl_nl": "western_european_we",
+        "en_us": "western_european_we", "en_uk": "western_european_we", "fi_fi": "western_european_we",
+        "fr_fr": "western_european_we", "gl_es": "western_european_we", "de_de": "western_european_we",
+        "el_gr": "western_european_we", "hu_hu": "western_european_we", "is_is": "western_european_we",
+        "ga_ie": "western_european_we", "it_it": "western_european_we", "kea_cv": "western_european_we",
+        "lb_lu": "western_european_we", "mt_mt": "western_european_we", "nb_no": "western_european_we",
+        "oc_fr": "western_european_we", "pt_br": "western_european_we", "es_419": "western_european_we",
+        "sv_se": "western_european_we", "cy_gb": "western_european_we", "hy_am": "eastern_european_ee",
+        "be_by": "eastern_european_ee", "bg_bg": "eastern_european_ee", "cs_cz": "eastern_european_ee",
+        "et_ee": "eastern_european_ee", "ka_ge": "eastern_european_ee", "lv_lv": "eastern_european_ee",
+        "lt_lt": "eastern_european_ee", "mk_mk": "eastern_european_ee", "pl_pl": "eastern_european_ee",
+        "ro_ro": "eastern_european_ee", "ru_ru": "eastern_european_ee", "sr_rs": "eastern_european_ee",
+        "sk_sk": "eastern_european_ee", "sl_si": "eastern_european_ee", "uk_ua": "eastern_european_ee",
+        "ar_eg": "central_asia_middle_north_african_cmn", "az_az": "central_asia_middle_north_african_cmn",
+        "he_il": "central_asia_middle_north_african_cmn", "kk_kz": "central_asia_middle_north_african_cmn",
+        "ky_kg": "central_asia_middle_north_african_cmn", "mn_mn": "central_asia_middle_north_african_cmn",
+        "ps_af": "central_asia_middle_north_african_cmn", "fa_ir": "central_asia_middle_north_african_cmn",
+        "ckb_iq": "central_asia_middle_north_african_cmn", "tg_tj": "central_asia_middle_north_african_cmn",
+        "tr_tr": "central_asia_middle_north_african_cmn", "uz_uz": "central_asia_middle_north_african_cmn",
+        "af_za": "sub_saharan_african_ssa", "am_et": "sub_saharan_african_ssa", "ff_sn": "sub_saharan_african_ssa",
+        "lg_ug": "sub_saharan_african_ssa", "ha_ng": "sub_saharan_african_ssa", "ig_ng": "sub_saharan_african_ssa",
+        "kam_ke": "sub_saharan_african_ssa", "ln_cd": "sub_saharan_african_ssa", "luo_ke": "sub_saharan_african_ssa",
+        "nso_za": "sub_saharan_african_ssa", "ny_mw": "sub_saharan_african_ssa", "om_et": "sub_saharan_african_ssa",
+        "sn_zw": "sub_saharan_african_ssa", "so_so": "sub_saharan_african_ssa", "sw_ke": "sub_saharan_african_ssa",
+        "umb_ao": "sub_saharan_african_ssa", "wo_sn": "sub_saharan_african_ssa", "xh_za": "sub_saharan_african_ssa",
+        "yo_ng": "sub_saharan_african_ssa", "zu_za": "sub_saharan_african_ssa",
+        "as_in": "south_asian_sa", "bn_in": "south_asian_sa", "gu_in": "south_asian_sa", "hi_in": "south_asian_sa",
+        "kn_in": "south_asian_sa", "ml_in": "south_asian_sa", "mr_in": "south_asian_sa", "ne_np": "south_asian_sa",
+        "or_in": "south_asian_sa", "pa_in": "south_asian_sa", "sd_in": "south_asian_sa", "ta_in": "south_asian_sa",
+        "te_in": "south_asian_sa", "ur_pk": "south_asian_sa",
+        "my_mm": "south_east_asian_sea", "ceb_ph": "south_east_asian_sea", "fil_ph": "south_east_asian_sea",
+        "id_id": "south_east_asian_sea", "jv_id": "south_east_asian_sea", "km_kh": "south_east_asian_sea",
+        "lo_la": "south_east_asian_sea", "ms_my": "south_east_asian_sea", "mi_nz": "south_east_asian_sea",
+        "th_th": "south_east_asian_sea", "vi_vn": "south_east_asian_sea",
+        "cmn_hans_cn": "chinese_japanase_korean_cjk", "yue_hant_hk": "chinese_japanase_korean_cjk",
+        "ja_jp": "chinese_japanase_korean_cjk", "ko_kr": "chinese_japanase_korean_cjk",
+    }
+
 def langtable_mailabs():
     return {
         "de_DE": "de_de",
@@ -33,7 +74,7 @@ def langtable_css10():
     }
 
 class DataProcessor:
-    def __init__(self, data_type, tsv_path, token_type, mos_filtering=False, lang_set=None):
+    def __init__(self, data_type, tsv_path, token_type, mos_filtering=False, lang_set=None, lang_family=False):
         self.dst_dir = pathlib.Path("data")
         self.data_type = data_type
         self.tsv_path = tsv_path
@@ -47,6 +88,11 @@ class DataProcessor:
                 self.lang_set = [line.strip() for line in fr]
         else:
             self.lang_set = None
+
+        if lang_family:
+            self.lang2group = lang2group()
+        else:
+            self.lang2group = None
 
         if self.data_type == "mailabs":
             self.langtable = langtable_mailabs()
@@ -122,6 +168,8 @@ class DataProcessor:
                 if self.lang_set is not None:
                     if lang not in self.lang_set:
                         continue
+                if self.lang2group is not None:
+                    lang = self.lang2group[lang]
                 lang2utt[lang].append(uttid)
                 utt2spk[uttid] = spk
                 utt2lang[uttid] = lang
@@ -195,6 +243,7 @@ def main():
     parser.add_argument("--use_fleurs", action="store_true")
     parser.add_argument("--use_css10", action="store_true")
     parser.add_argument("--mos_filtering", action="store_true")
+    parser.add_argument("--lang_family", action="store_true")
     parser.add_argument("--lang_set", default=None, type=pathlib.Path)
     args = parser.parse_args()
 
@@ -212,7 +261,8 @@ def main():
             tsv_path,
             args.token_type,
             args.mos_filtering,
-            args.lang_set).process()
+            args.lang_set,
+            args.lang_family).process()
         data_types.append("mailabs")
     if args.use_fleurs:
         print("Processing FLEURS ...")
@@ -222,7 +272,8 @@ def main():
             tsv_path,
             args.token_type,
             args.mos_filtering,
-            args.lang_set).process()
+            args.lang_set,
+            args.lang_family).process()
         data_types.append("fleurs")
     if args.use_css10:
         print("Processing CSS10 ...")
@@ -232,7 +283,8 @@ def main():
             tsv_path,
             args.token_type,
             args.mos_filtering,
-            args.lang_set).process()
+            args.lang_set,
+            args.lang_family).process()
         data_types.append("css10")
     
     assert len(data_types) > 0, "No data type is specified."

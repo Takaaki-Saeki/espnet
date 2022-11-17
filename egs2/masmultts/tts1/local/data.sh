@@ -24,6 +24,7 @@ use_fleurs=false
 use_mailabs=true
 mos_filtering=true
 lang_set=null
+lang_family=false
 
 log "$0 $*"
 . utils/parse_options.sh
@@ -43,6 +44,9 @@ if [ ${mos_filtering} = true ]; then
 fi
 if [ ${lang_set} != null ]; then
     opts_data+=" --lang_set ${lang_set}"
+fi
+if [ ${lang_family} = true ]; then
+    opts_data+=" --lang_family"
 fi
 
 

@@ -11,13 +11,13 @@ n_shift=256
 
 ################# Configs to be set #####################
 token_type=byte
-use_mailabs=true
+use_mailabs=false
 use_css10=true
-use_fleurs=true
+use_fleurs=false
 use_lid=true
 mos_filtering=true
 lang_set=null
-do_trimming=true
+do_trimming=false
 lang_family=true
 #########################################################
 

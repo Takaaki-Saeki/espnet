@@ -35,6 +35,7 @@ egs*/*/*/downloads
 egs*/*/*/dump
 egs*/*/*/enhan
 egs*/*/*/exp
+egs*/*/*/RawNet
 egs*/*/*/fbank
 egs*/*/*/mfcc
 egs*/*/*/stft

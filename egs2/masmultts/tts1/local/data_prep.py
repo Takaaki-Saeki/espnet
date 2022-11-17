@@ -2,6 +2,7 @@ import pathlib
 import argparse
 import numpy as np
 import os
+import re
 import string
 from collections import defaultdict
 
@@ -131,6 +132,9 @@ class DataProcessor:
             uttid for uttid in utt_list if uttid in self.mos_filtered_utt]
         return out_utt_list
 
+    def remove_non_printable_chars(self, in_string):
+        return ''.join(c for c in in_string if c.isprintable())
+
     def process(self):
 
         db_dir = self.tsv_path.parent
@@ -159,10 +163,10 @@ class DataProcessor:
                 spk = line_list[3]
                 text = line_list[4]
                 if self.token_type == "byte":
-                    text = text.upper()
                     # Removing invalid characters
+                    text = self.remove_non_printable_chars(text)
                     text = text.replace("\u3000", " ")
-                    text = filter(lambda x: x in string.printable, text)
+                    text = text.lower()
                 if self.langtable is not None:
                     lang = self.langtable[lang]
                 if self.lang_set is not None:

@@ -17,7 +17,7 @@ use_fleurs=true
 use_lid=true
 mos_filtering=true
 lang_set=null
-do_trimming=true
+do_trimming=false
 #########################################################
 
 local_data_opts=""

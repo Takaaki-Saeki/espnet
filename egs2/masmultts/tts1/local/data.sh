@@ -19,9 +19,9 @@ nj=32
 
 do_trimming=true
 token_type=byte
-use_css10=true
+use_css10=false
 use_fleurs=false
-use_mailabs=true
+use_mailabs=false
 mos_filtering=true
 lang_set=null
 lang_family=false

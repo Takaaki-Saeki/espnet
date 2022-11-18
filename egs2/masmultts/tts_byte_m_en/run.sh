@@ -12,12 +12,13 @@ n_shift=256
 ################# Configs to be set #####################
 token_type=byte
 use_mailabs=true
-use_css10=true
+use_css10=false
 use_fleurs=false
 use_lid=true
-mos_filtering=true
-lang_set=null
+mos_filtering=false
+lang_set="lang_set.txt"
 do_trimming=false
+lang_family=false
 #########################################################
 
 local_data_opts=""
@@ -27,6 +28,7 @@ local_data_opts+=" --use_css10 ${use_css10}"
 local_data_opts+=" --use_fleurs ${use_fleurs}"
 local_data_opts+=" --mos_filtering ${mos_filtering}"
 local_data_opts+=" --lang_set ${lang_set}"
+local_data_opts+=" --lang_family ${lang_family}"
 local_data_opts+=" --do_trimming ${do_trimming}"
 
 opts=
@@ -65,18 +67,14 @@ test_sets=test
     --fs "${fs}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
-    --win_length null \
     --use_xvector true \
     --xvector_tool rawnet \
     --token_type "${model_token_type}" \
     --cleaner "${cleaner}" \
     --g2p "${g2p}" \
-    --tts_task gan_tts \
-    --feats_extract linear_spectrogram \
-    --feats_normalize none \
     --train_config "${train_config}" \
     --inference_config "${inference_config}" \
-    --inference_model latest.pth \
+    --inference_model valid.loss.best.pth \
     --min_wav_duration 0.1 \
     --max_wav_duration 15 \
     --train_set "${train_set}" \

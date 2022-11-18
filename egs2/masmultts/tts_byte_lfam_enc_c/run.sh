@@ -18,13 +18,13 @@ use_lid=true
 mos_filtering=true
 lang_set=null
 do_trimming=false
-lang_family=false
+lang_family=true
 #########################################################
 
 local_data_opts=""
 local_data_opts+=" --token_type ${token_type}"
 local_data_opts+=" --use_mailabs ${use_mailabs}"
-local_data_opes+=" --use_css10 ${use_css10}"
+local_data_opts+=" --use_css10 ${use_css10}"
 local_data_opts+=" --use_fleurs ${use_fleurs}"
 local_data_opts+=" --mos_filtering ${mos_filtering}"
 local_data_opts+=" --lang_set ${lang_set}"

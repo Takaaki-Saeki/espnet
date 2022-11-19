@@ -67,8 +67,14 @@ def main():
     with open(args.in_tsv, "r") as fr:
         in_list = [line.strip() for line in fr]
 
-    out_list_tphn = []
-    out_list_bphn = []
+    out_name_bphn = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + "_bphn.tsv"
+    out_name_tphn = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + "_tphn.tsv"
+
+    with open(out_name_bphn, "w") as fw:
+        pass
+    with open(out_name_tphn, "w") as fw:
+        pass
+
     for line in tqdm.tqdm(in_list):
         line_list = line.strip().split("\t")
         if len(line_list) < 5:
@@ -101,16 +107,13 @@ def main():
         tphn_text = " ".join(out_tphn)
         out_line_list_bphn = [uttid, wavpath, lang, spk, bphn_text]
         out_line_list_tphn = [uttid, wavpath, lang, spk, tphn_text]
-        out_list_bphn.append("\t".join(out_line_list_bphn))
-        out_list_tphn.append("\t".join(out_line_list_tphn))
 
-    out_name_bphn = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + "_bphn.tsv"
-    out_name_tphn = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + "_tphn.tsv"
-
-    with open(out_name_bphn, "w") as fw:
-        fw.write("\n".join(out_list_bphn))
-    with open(out_name_tphn, "w") as fw:
-        fw.write("\n".join(out_list_tphn))
+        with open(out_name_bphn, "a") as fw:
+            fw.write("\t".join(out_line_list_bphn))
+            fw.write("\n")
+        with open(out_name_tphn, "a") as fw:
+            fw.write("\t".join(out_line_list_tphn))
+            fw.write("\n")
 
 if __name__ == "__main__":
     main()

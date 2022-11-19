@@ -16,8 +16,8 @@ use_css10=true
 use_fleurs=false
 use_lid=true
 mos_filtering=true
-lang_set=null
-do_trimming=true
+lang_set="lang_set.txt"
+do_trimming=false
 #########################################################
 
 local_data_opts=""

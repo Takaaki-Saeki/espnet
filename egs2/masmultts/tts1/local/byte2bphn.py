@@ -69,11 +69,7 @@ def main():
 
     out_list_tphn = []
     out_list_bphn = []
-    cnt = 0
     for line in tqdm.tqdm(in_list):
-        cnt+=1
-        if cnt==10:
-            break
         line_list = line.strip().split("\t")
         uttid = line_list[0]
         wavpath = line_list[1]

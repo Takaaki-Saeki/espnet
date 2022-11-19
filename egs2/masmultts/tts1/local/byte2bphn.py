@@ -101,8 +101,8 @@ def main():
         out_list_bphn.append("\t".join(out_line_list_bphn))
         out_list_tphn.append("\t".join(out_line_list_tphn))
 
-    out_name_bphn = args.in_tsv.stem.strip().split("_")[0] + "_bphn.tsv"
-    out_name_tphn = args.in_tsv.stem.strip().split("_")[0] + "_tphn.tsv"
+    out_name_bphn = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + "_bphn.tsv"
+    out_name_tphn = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + "_tphn.tsv"
 
     with open(out_name_bphn, "w") as fw:
         fw.write("\n".join(out_list_bphn))

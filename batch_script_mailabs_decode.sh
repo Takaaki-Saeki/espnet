@@ -28,40 +28,34 @@ dir=`pwd`; log "Current dir: ${dir}"
 # Set up dir paths
 localdir="${SGE_LOCALDIR}"
 
-######################################
-case_name="tts_pre_lfenc_byte_m_en"
-token="byte"
-######################################
-
+# Not copying data directory due to storage limitation
+# target_dataset_root="${localdir}/dataset"
 share_storage="/$HOME/share-storage/dataset"
+# rm -rf ${target_dataset_root}
+# log "Copying data to ${localdir} ..."
+# mkdir -p ${target_dataset_root}
+# cp -r /$HOME/share-storage/dataset/mailab.tar.gz ${target_dataset_root}/
+# tar -zxvf ${target_dataset_root}/mailab.tar.gz -C ${target_dataset_root} --remove-files
+# tar -zxvf "${share_storage}/mailab.tar.gz" -C "${share_storage}"
+# echo "Successfully copied datasets"
 
 # Specifying the dataset path
-egs_dir=egs2/masmultts/${case_name}
-rm -rf ${egs_dir}/data
-rm -rf ${egs_dir}/RawNet
-rm -rf ${egs_dir}/exp
-dataset_name=MasMulTTS
+## tts1: filtering with MOS3.5
+case_name="tts1"
+
+egs_dir=egs2/m_ailabs/${case_name}
+dataset_name=mailab
 target_dataset="${share_storage}/${dataset_name}"
 cd ${egs_dir}
-db_name=MASMULTTS
+db_name=M_AILABS
 db_path=db.sh
-log "target root: ${target_dataset_root}"
 sed -i -e "s@${db_name}.*@${db_name}=${target_dataset}@g" "${db_path}"
+cat ${db_path}
 
-dumpdir="${localdir}/dump"
+# Preparing features
+./run_byte.sh --stage 2 --stop-stage 5 \
+--dumpdir "${localdir}/dump"
 
-# Running preprocessing
-./run.sh \
---stage 1 --stop-stage 4 \
---dumpdir "${dumpdir}" \
---ngpu 1
-
-# change token list
-rm -rf ${dumpdir}/token_list/${token}/tokens.txt
-cp ../token_list_${token}.txt ${dumpdir}/token_list/${token}/tokens.txt
-
-# Running training
-./run.sh \
---stage 5 --stop-stage 7 \
---dumpdir "${dumpdir}" \
---ngpu 1
+# Running inference
+./run_byte.sh --stage 7 --stop-stage 7 \
+--dumpdir "${localdir}/dump"

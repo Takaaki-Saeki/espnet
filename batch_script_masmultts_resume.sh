@@ -29,14 +29,14 @@ dir=`pwd`; log "Current dir: ${dir}"
 localdir="${SGE_LOCALDIR}"
 
 ######################################
-case_name="tts_byte_cm1"
+case_name="tts_pre_lfenc_byte_m_en"
+token="byte"
 ######################################
 
 share_storage="/$HOME/share-storage/dataset"
 
 # Specifying the dataset path
 egs_dir=egs2/masmultts/${case_name}
-rm -rf ${egs_dir}/exp
 dataset_name=MasMulTTS
 target_dataset="${share_storage}/${dataset_name}"
 cd ${egs_dir}
@@ -44,10 +44,21 @@ db_name=MASMULTTS
 db_path=db.sh
 log "target root: ${target_dataset_root}"
 sed -i -e "s@${db_name}.*@${db_name}=${target_dataset}@g" "${db_path}"
-cat ${db_path}
+
+dumpdir="${localdir}/dump"
+
+# Running preprocessing
+./run.sh \
+--stage 2 --stop-stage 4 \
+--dumpdir "${dumpdir}" \
+--ngpu 1
+
+# change token list
+rm -rf ${dumpdir}/token_list/${token}/tokens.txt
+cp ../token_list_${token}.txt ${dumpdir}/token_list/${token}/tokens.txt
 
 # Running training
 ./run.sh \
---stage 2 --stop-stage 7 \
---dumpdir "${localdir}/dump" \
+--stage 5 --stop-stage 7 \
+--dumpdir "${dumpdir}" \
 --ngpu 1

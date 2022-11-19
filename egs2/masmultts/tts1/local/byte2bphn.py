@@ -71,6 +71,9 @@ def main():
     out_list_bphn = []
     for line in tqdm.tqdm(in_list):
         line_list = line.strip().split("\t")
+        if len(line_list) < 5:
+            # Filtering out lines with less than 5 columns
+            continue
         uttid = line_list[0]
         wavpath = line_list[1]
         lang = line_list[2]

@@ -57,9 +57,9 @@ tts_conf:                  # keyword arguments for the selected model
     modules_applied_guided_attn: ["encoder-decoder"] # modules to apply guided attention loss
     guided_attn_loss_sigma: 0.4                      # sigma in guided attention loss
     guided_attn_loss_lambda: 10.0                    # lambda in guided attention loss
-    langs: 7
-    lang_family_encoding: True
-    num_lang_family: 7
+    langs: 2
+    lang_family_encoding: False
+    num_lang_family: -1
 
 ##########################################################
 #            OPTIMIZER & SCHEDULER SETTING               #
@@ -89,8 +89,8 @@ sort_batch: descending      # how to sort created batches
 num_workers: 1              # number of workers of data loader
 train_dtype: float32        # dtype in training
 log_interval: null          # log interval in iterations
-keep_nbest_models: 3        # number of models to keep
-num_att_plot: 1             # number of attention figures to be saved in every check
+keep_nbest_models: 5        # number of models to keep
+num_att_plot: 3             # number of attention figures to be saved in every check
 seed: 0                     # random seed number
 best_model_criterion:
 -   - valid

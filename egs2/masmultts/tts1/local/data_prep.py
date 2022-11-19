@@ -253,7 +253,8 @@ def main():
 
     data_types = []
 
-    suffix = ""
+    if args.token_type == "byte":
+        suffix = "_norm"
     if args.token_type == "tphn":
         suffix = "_tphn"
 

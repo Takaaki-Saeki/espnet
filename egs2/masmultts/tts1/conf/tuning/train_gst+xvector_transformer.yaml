@@ -18,11 +18,9 @@ tts_conf:                  # keyword arguments for the selected model
     dprenet_units: 256     # number of units in decoder prenet
     adim: 512              # attention dimension
     aheads: 8              # number of attention heads
-    elayers: 8             # number of encoder layers
-    # elayers: 6             # number of encoder layers
+    elayers: 6             # number of encoder layers
     eunits: 1024           # number of encoder ff units
-    # dlayers: 6             # number of decoder layers
-    dlayers: 8             # number of decoder layers
+    dlayers: 6             # number of decoder layers
     dunits: 1024           # number of decoder ff units
     positionwise_layer_type: conv1d  # type of position-wise layer
     positionwise_conv_kernel_size: 1 # kernel size of position wise conv layer
@@ -72,7 +70,7 @@ optim_conf:             # keyword arguments for selected optimizer
 scheduler: noamlr       # scheduler type
 scheduler_conf:         # keyword arguments for selected scheduler
     model_size: 512     # model size, a.k.a., attention dimenstion
-    warmup_steps: 12000 # the number of warmup steps
+    warmup_steps: 50000 # the number of warmup steps
 
 ##########################################################
 #                OTHER TRAINING SETTING                  #

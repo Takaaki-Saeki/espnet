@@ -15,10 +15,10 @@ use_mailabs=true
 use_css10=true
 use_fleurs=true
 use_lid=true
-mos_filtering=true
+mos_filtering=false
 lang_set=null
 do_trimming=false
-lang_family=true
+lang_family=false
 #########################################################
 
 local_data_opts=""
@@ -67,8 +67,8 @@ test_sets=test
     --fs "${fs}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
-    --use_xvector true \
-    --xvector_tool rawnet \
+    --use_xvector false \
+    --use_sid false \
     --token_type "${model_token_type}" \
     --cleaner "${cleaner}" \
     --g2p "${g2p}" \

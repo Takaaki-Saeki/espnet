@@ -14,11 +14,11 @@ token_type=byte
 use_mailabs=true
 use_css10=true
 use_fleurs=true
-use_lid=true
+use_lid=false
 mos_filtering=true
 lang_set="lang_set.txt"
 do_trimming=false
-lang_family=false
+lang_family=true
 #########################################################
 
 local_data_opts=""

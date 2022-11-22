@@ -10,11 +10,11 @@ n_fft=1024
 n_shift=256
 
 ################# Configs to be set #####################
-token_type=byte
+token_type=tphn
 use_mailabs=true
 use_css10=true
 use_fleurs=true
-use_lid=true
+use_lid=false
 mos_filtering=true
 lang_set="lang_set.txt"
 do_trimming=false

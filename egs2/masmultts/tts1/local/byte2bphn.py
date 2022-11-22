@@ -67,13 +67,13 @@ def main():
     with open(args.in_tsv, "r") as fr:
         in_list = [line.strip() for line in fr]
 
-    out_name_bphn = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + "_bphn.tsv"
-    out_name_tphn = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + "_tphn.tsv"
+    out_names = {}
+    for name in ["phn", "tphn", "bphn", "btphn"]:
+        out_names[name] = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + f"_{name}.tsv"
+        with open(out_names[name], "w") as fw:
+            pass
 
-    with open(out_name_bphn, "w") as fw:
-        pass
-    with open(out_name_tphn, "w") as fw:
-        pass
+    _, phoneme2phone = get_p2p(lang2code)
 
     for line in tqdm.tqdm(in_list):
         line_list = line.strip().split("\t")
@@ -91,29 +91,37 @@ def main():
         text = line_list[4]
         lcode = lang2code[lang]
         words = text.strip().split()
-        out_tphn = []
-        out_bphn = []
+        
+        out_list = {}
+        for name in ["phn", "tphn", "bphn", "btphn"]:
+            out_list[name] = []
+
         for word in words:
             byte = [str(x) for x in list(text.encode("utf-8"))]
-            out_bphn += byte
+            out_list["bphn"] += byte
+            out_list["btphn"] += byte
             # adding boundary token for byte and tphn
-            out_bphn.append("<bnd>")
-            tphn = model.inference_word(word, lcode)
-            out_bphn += tphn
-            out_bphn.append("<space>")
-            out_tphn.append("".join(tphn))
-        out_bphn = out_bphn[:-1]
-        bphn_text = " ".join(out_bphn)
-        tphn_text = " ".join(out_tphn)
-        out_line_list_bphn = [uttid, wavpath, lang, spk, bphn_text]
-        out_line_list_tphn = [uttid, wavpath, lang, spk, tphn_text]
+            out_list["bphn"].append("<bnd>")
+            out_list["btphn"].append("<bnd>")
+            tphn = model.inference_word(word, target_langs=None, lang_id=lcode)
+            phn = [
+                phoneme2phone[lcode][w][0] if w in phoneme2phone[lcode] else "<unk>" for w in tphn
+            ]
+            out_list["bphn"] += phn
+            out_list["bphn"].append("<space>")
+            out_list["btphn"] += tphn
+            out_list["btphn"].append("<space>")
+            out_list["phn"].append("".join(phn))
+            out_list["tphn"].append("".join(tphn))
+        out_list["bphn"] = out_list["bphn"][:-1]
+        out_list["btphn"] = out_list["btphn"][:-1]
+        for name in ["phn", "tphn", "bphn", "btphn"]:
+            processed_text = " ".join(out_list[name])
+            out_line_list = [uttid, wavpath, lang, spk, processed_text]
 
-        with open(out_name_bphn, "a") as fw:
-            fw.write("\t".join(out_line_list_bphn))
-            fw.write("\n")
-        with open(out_name_tphn, "a") as fw:
-            fw.write("\t".join(out_line_list_tphn))
-            fw.write("\n")
+            with open(out_names[name], "a") as fw:
+                fw.write("\t".join(out_line_list))
+                fw.write("\n")
 
 if __name__ == "__main__":
     main()

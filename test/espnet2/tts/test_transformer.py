@@ -9,12 +9,16 @@ from espnet2.tts.transformer import Transformer
 @pytest.mark.parametrize("postnet_layers", [0, 1])
 @pytest.mark.parametrize("reduction_factor", [1, 3])
 @pytest.mark.parametrize(
-    "spk_embed_dim, spk_embed_integration_type",
-    [(None, "add"), (2, "add"), (2, "concat")],
+    "spk_embed_dim, spk_embed_integration_type, lang_embed_dim, lang_embed_integration_type",
+    [(None, "add", None, "add"), (2, "add", 2, "add"), (2, "concat", 2, "concat")],
 )
 @pytest.mark.parametrize(
-    "spks, langs, use_gst, lang_family_encoding, num_lang_family",
-    [(-1, -1, False, False, -1), (10, 7, True, True, 7)],
+    "spks, langs, use_gst, lang_family_encoding, num_lang_family, use_mlm_loss, holdout_lids",
+    [
+        (-1, -1, False, False, -1, False, None),
+        (10, 7, True, False, -1, False, "3 4"),
+        (10, 7, True, True, 7, False, None)
+    ],
 )
 @pytest.mark.parametrize(
     "use_guided_attn_loss, modules_applied_guided_attn",
@@ -32,9 +36,13 @@ def test_tranformer(
     langs,
     spk_embed_dim,
     spk_embed_integration_type,
+    lang_embed_dim,
+    lang_embed_integration_type,
     use_gst,
     lang_family_encoding,
     num_lang_family,
+    use_mlm_loss,
+    holdout_lids,
     use_guided_attn_loss,
     modules_applied_guided_attn,
 ):
@@ -64,6 +72,8 @@ def test_tranformer(
         langs=langs,
         spk_embed_dim=spk_embed_dim,
         spk_embed_integration_type=spk_embed_integration_type,
+        lang_embed_dim=lang_embed_dim,
+        lang_embed_integration_type=lang_embed_integration_type,
         use_gst=use_gst,
         gst_tokens=2,
         gst_heads=4,
@@ -76,6 +86,8 @@ def test_tranformer(
         loss_type="L1",
         use_guided_attn_loss=use_guided_attn_loss,
         modules_applied_guided_attn=modules_applied_guided_attn,
+        use_mlm_loss=use_mlm_loss,
+        holdout_lids=holdout_lids,
         lang_family_encoding=lang_family_encoding,
         num_lang_family=num_lang_family
     )
@@ -88,6 +100,8 @@ def test_tranformer(
     )
     if spk_embed_dim is not None:
         inputs.update(spembs=torch.randn(2, spk_embed_dim))
+    if lang_embed_dim is not None:
+        inputs.update(lembs=torch.randn(2, lang_embed_dim))
     if spks > 0:
         inputs.update(sids=torch.randint(0, spks, (2, 1)))
     if langs > 0:
@@ -106,6 +120,8 @@ def test_tranformer(
             inputs.update(feats=torch.randn(5, 5))
         if spk_embed_dim is not None:
             inputs.update(spembs=torch.randn(spk_embed_dim))
+        if lang_embed_dim is not None:
+            inputs.update(lembs=torch.randn(lang_embed_dim))
         if spks > 0:
             inputs.update(sids=torch.randint(0, spks, (1,)))
         if langs > 0:

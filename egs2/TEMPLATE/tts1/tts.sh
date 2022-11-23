@@ -70,6 +70,11 @@ use_xvector=false   # Whether to use x-vector.
 xvector_tool=kaldi  # Toolkit for extracting x-vector (speechbrain, espnet, kaldi)
 xvector_model=speechbrain/spkrec-ecapa-voxceleb  # For only espnet or speechbrain
 
+# Language-vector related
+use_lvector=false      # Whether to use language vector.
+lvector_tool=lang2vec  # Toolkit for extracting language vector (lang2vec)
+lvector_feats_type=fam         # Feature type for language embedding
+
 # Vocabulary related
 oov="<unk>"         # Out of vocabrary symbol.
 blank="<blank>"     # CTC blank symbol.
@@ -431,6 +436,25 @@ if ! "${skip_data_prep}"; then
             fi
         fi
 
+        # Extract Language vector
+        if "${use_lvector}"; then
+            if [ "${lvector_tool}" = "lang2vec" ]; then
+                log "Stage 2+: Extract Language vector: data/ -> ${dumpdir}/lvector using python toolkits"
+                for dset in "${train_set}" "${valid_set}" ${test_sets}; do
+                    if [ "${dset}" = "${train_set}" ] || [ "${dset}" = "${valid_set}" ]; then
+                        _suf="/org"
+                    else
+                        _suf=""
+                    fi
+                    pyscripts/utils/extract_lang_vectors.py \
+                        --toolkit ${lvector_tool} \
+                        --feats_type ${lvector_feats_type} \
+                        --in_folder ${data_feats}${_suf}/${dset} \
+                        --out_folder ${dumpdir}/lvector/${dset}
+                done
+            fi
+        fi
+
         # Prepare spk id input
         if "${use_sid}"; then
             log "Stage 2+: Prepare speaker id: data/ -> ${data_feats}/"
@@ -531,6 +555,14 @@ if ! "${skip_data_prep}"; then
                     utils/filter_scp.pl "${data_feats}/${dset}/wav.scp"  \
                     >"${dumpdir}/xvector/${dset}/xvector.scp"
             fi
+
+            # Filter language vector
+            if "${use_lvector}"; then
+                cp "${dumpdir}/lvector/${dset}"/lvector.{scp,scp.bak}
+                <"${dumpdir}/lvector/${dset}/lvector.scp.bak" \
+                    utils/filter_scp.pl "${data_feats}/${dset}/wav.scp"  \
+                    >"${dumpdir}/lvector/${dset}/lvector.scp"
+            fi
         done
     fi
 
@@ -619,6 +651,13 @@ if ! "${skip_train}"; then
             _xvector_valid_dir="${dumpdir}/xvector/${valid_set}"
             _opts+="--train_data_path_and_name_and_type ${_xvector_train_dir}/xvector.scp,spembs,kaldi_ark "
             _opts+="--valid_data_path_and_name_and_type ${_xvector_valid_dir}/xvector.scp,spembs,kaldi_ark "
+        fi
+
+        if "${use_lvector}"; then
+            _lvector_train_dir="${dumpdir}/lvector/${train_set}"
+            _lvector_valid_dir="${dumpdir}/lvector/${valid_set}"
+            _opts+="--train_data_path_and_name_and_type ${_lvector_train_dir}/lvector.scp,lembs,kaldi_ark "
+            _opts+="--valid_data_path_and_name_and_type ${_lvector_valid_dir}/lvector.scp,lembs,kaldi_ark "
         fi
 
         if "${use_sid}"; then
@@ -868,6 +907,14 @@ if ! "${skip_train}"; then
             _opts+="--valid_data_path_and_name_and_type ${_xvector_valid_dir}/xvector.scp,spembs,kaldi_ark "
         fi
 
+        # Add X-vector to the inputs if needed
+        if "${use_lvector}"; then
+            _lvector_train_dir="${dumpdir}/lvector/${train_set}"
+            _lvector_valid_dir="${dumpdir}/lvector/${valid_set}"
+            _opts+="--train_data_path_and_name_and_type ${_lvector_train_dir}/lvector.scp,lembs,kaldi_ark "
+            _opts+="--valid_data_path_and_name_and_type ${_lvector_valid_dir}/lvector.scp,lembs,kaldi_ark "
+        fi
+
         # Add spekaer ID to the inputs if needed
         if "${use_sid}"; then
             _opts+="--train_data_path_and_name_and_type ${_train_dir}/utt2sid,sids,text_int "
@@ -999,6 +1046,12 @@ if ! "${skip_eval}"; then
                 _ex_opts+="--data_path_and_name_and_type ${_xvector_dir}/xvector.scp,spembs,kaldi_ark "
             fi
 
+            # Add language vector to the inputs if needed
+            if "${use_lvector}"; then
+                _lvector_dir="${dumpdir}/lvector/${dset}"
+                _ex_opts+="--data_path_and_name_and_type ${_lvector_dir}/lvector.scp,lembs,kaldi_ark "
+            fi
+
             # Add spekaer ID to the inputs if needed
             if "${use_sid}"; then
                 _ex_opts+="--data_path_and_name_and_type ${_data}/utt2sid,sids,text_int "
@@ -1117,6 +1170,12 @@ if [ -z "${download_model}" ]; then
             for dset in "${train_set}" ${test_sets}; do
                 _opts+=" --option ${dumpdir}/xvector/${dset}/spk_xvector.scp"
                 _opts+=" --option ${dumpdir}/xvector/${dset}/spk_xvector.ark"
+            done
+        fi
+        if "${use_lvector}"; then
+            for dset in "${train_set}" ${test_sets}; do
+                _opts+=" --option ${dumpdir}/lvector/${dset}/lang_lvector.scp"
+                _opts+=" --option ${dumpdir}/lvector/${dset}/lang_lvector.ark"
             done
         fi
         if "${use_sid}"; then

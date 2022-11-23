@@ -212,7 +212,7 @@ class TTSTask(AbsTask):
         return CommonCollateFn(
             float_pad_value=0.0,
             int_pad_value=0,
-            not_sequence=["spembs", "sids", "lids"],
+            not_sequence=["spembs", "sids", "lembs", "lids"],
         )
 
     @classmethod
@@ -253,6 +253,7 @@ class TTSTask(AbsTask):
         if not inference:
             retval = (
                 "spembs",
+                "lembs",
                 "durations",
                 "pitch",
                 "energy",
@@ -263,6 +264,7 @@ class TTSTask(AbsTask):
             # Inference mode
             retval = (
                 "spembs",
+                "lembs",
                 "speech",
                 "durations",
                 "pitch",

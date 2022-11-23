@@ -63,6 +63,7 @@ class ESPnetTTSModel(AbsESPnetModel):
         energy_lengths: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
+        lembs: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor], torch.Tensor]:
@@ -81,6 +82,7 @@ class ESPnetTTSModel(AbsESPnetModel):
             energy_lengths (Optional[Tensor]): Energy length tensor (B,).
             spembs (Optional[Tensor]): Speaker embedding tensor (B, D).
             sids (Optional[Tensor]): Speaker ID tensor (B, 1).
+            lembs (Optional[Tensor]): Language embedding tensor (B, D).
             lids (Optional[Tensor]): Language ID tensor (B, 1).
             kwargs: "utt_id" is among the input.
 
@@ -137,6 +139,8 @@ class ESPnetTTSModel(AbsESPnetModel):
             batch.update(spembs=spembs)
         if sids is not None:
             batch.update(sids=sids)
+        if lembs is not None:
+            batch.update(lembs=lembs)
         if lids is not None:
             batch.update(lids=lids)
         if durations is not None:
@@ -164,6 +168,7 @@ class ESPnetTTSModel(AbsESPnetModel):
         energy_lengths: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
+        lembs: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
         **kwargs,
     ) -> Dict[str, torch.Tensor]:
@@ -182,6 +187,7 @@ class ESPnetTTSModel(AbsESPnetModel):
             energy_lengths (Optional[Tensor): Energy length tensor (B,).
             spembs (Optional[Tensor]): Speaker embedding tensor (B, D).
             sids (Optional[Tensor]): Speaker ID tensor (B, 1).
+            lembs (Optional[Tensor]): Language embedding tensor (B, D).
             lids (Optional[Tensor]): Language ID tensor (B, 1).
 
         Returns:
@@ -226,6 +232,7 @@ class ESPnetTTSModel(AbsESPnetModel):
         speech: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
+        lembs: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
         durations: Optional[torch.Tensor] = None,
         pitch: Optional[torch.Tensor] = None,
@@ -239,6 +246,7 @@ class ESPnetTTSModel(AbsESPnetModel):
             speech (Tensor): Speech waveform tensor (T_wav).
             spembs (Optional[Tensor]): Speaker embedding tensor (D,).
             sids (Optional[Tensor]): Speaker ID tensor (1,).
+            lembs (Optional[Tensor]): Language embedding tensor (D,).
             lids (Optional[Tensor]): Language ID tensor (1,).
             durations (Optional[Tensor): Duration tensor.
             pitch (Optional[Tensor): Pitch tensor.
@@ -293,6 +301,8 @@ class ESPnetTTSModel(AbsESPnetModel):
             input_dict.update(spembs=spembs)
         if sids is not None:
             input_dict.update(sids=sids)
+        if lembs is not None:
+            input_dict.update(lembs=lembs)
         if lids is not None:
             input_dict.update(lids=lids)
 

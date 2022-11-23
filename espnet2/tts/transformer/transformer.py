@@ -3,6 +3,7 @@
 
 """Transformer-TTS related modules."""
 
+import math
 import random
 from typing import Dict, Optional, Sequence, Tuple
 
@@ -84,6 +85,8 @@ class Transformer(AbsTTS):
         langs: Optional[int] = None,
         spk_embed_dim: Optional[int] = None,
         spk_embed_integration_type: str = "add",
+        lang_embed_dim: Optional[int] = None,
+        lang_embed_integration_type: str = "add",
         use_gst: bool = False,
         gst_tokens: int = 10,
         gst_heads: int = 4,
@@ -120,6 +123,7 @@ class Transformer(AbsTTS):
         use_mlm_loss: bool = False,
         lang_family_encoding: bool = False,
         num_lang_family: int = -1,
+        holdout_lids: str = None,
     ):
         """Initialize Transformer module.
 
@@ -211,7 +215,9 @@ class Transformer(AbsTTS):
                 guided attention loss.
             guided_attn_loss_sigma (float) Sigma in guided attention loss.
             guided_attn_loss_lambda (float): Lambda in guided attention loss.
-
+            use_mlm_loss (bool): Whether to use masked language model loss.
+            lang_family_encoding (bool): Whether to use language family encoding.
+            num_lang_family (int): Number of language families.
         """
         assert check_argument_types()
         super().__init__()
@@ -238,9 +244,6 @@ class Transformer(AbsTTS):
             else:
                 self.num_heads_applied_guided_attn = num_heads_applied_guided_attn
             self.modules_applied_guided_attn = modules_applied_guided_attn
-        
-        if self.use_mlm_loss:
-            self.mlm_criterion = torch.nn.MSELoss()
 
         # use idx 0 as padding idx
         self.padding_idx = 0
@@ -376,6 +379,27 @@ class Transformer(AbsTTS):
             else:
                 self.projection = torch.nn.Linear(adim + self.spk_embed_dim, adim)
 
+        # Define language embedding
+        self.lang_embed_dim = None
+        if lang_embed_dim is not None and lang_embed_dim > 0:
+            self.lang_embed_dim = lang_embed_dim
+            self.lang_embed_integration_type = lang_embed_integration_type
+        if self.lang_embed_dim is not None:
+            if self.lang_embed_integration_type == "add":
+                self.lang_projection = torch.nn.Linear(self.lang_embed_dim, adim)
+            else:
+                self.lang_projection = torch.nn.Linear(adim + self.lang_embed_dim, adim)
+
+        if self.use_mlm_loss:
+            assert langs is not None, "langs must be specified when use_mlm_loss is True."
+            assert lang_family_encoding is False, "Not supporting lang_family_encoding when use_mlm_loss is True."
+            self.mlm_head = BertLMPredictionHead(
+                hidden_size=adim,
+                vocab_size=idim)
+            self.ignore_idx = -100
+            self.mlm_criterion = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_idx)
+            self.holdout_lids = torch.tensor([int(x) for x in holdout_lids.strip().split()])
+
         # define transformer decoder
         if dprenet_layers != 0:
             # decoder prenet
@@ -467,6 +491,7 @@ class Transformer(AbsTTS):
         feats_lengths: torch.Tensor,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
+        lembs: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
         joint_training: bool = False,
     ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor], torch.Tensor]:
@@ -479,6 +504,7 @@ class Transformer(AbsTTS):
             feats_lengths (LongTensor): Batch of the lengths of each target (B,).
             spembs (Optional[Tensor]): Batch of speaker embeddings (B, spk_embed_dim).
             sids (Optional[Tensor]): Batch of speaker IDs (B, 1).
+            lembs (Optional[Tensor]): Batch of language embeddings (B, lang_embed_dim).
             lids (Optional[Tensor]): Batch of language IDs (B, 1).
             joint_training (bool): Whether to perform joint training with vocoder.
 
@@ -505,14 +531,39 @@ class Transformer(AbsTTS):
         labels = make_pad_mask(olens - 1).to(ys.device, ys.dtype)
         labels = F.pad(labels, [0, 1], "constant", 1.0)
 
+        if self.use_mlm_loss:
+            mlm_loss = self._mlm_forward(xs=xs, ilens=ilens)
+            (
+                xs, ilens, ys, olens,
+                spembs, sids, lembs, lids, labels,
+                is_empty
+            ) = self._select_holdin_langs(
+                xs=xs,
+                ilens=ilens,
+                ys=ys,
+                olens=olens,
+                spembs=spembs,
+                sids=sids,
+                lembs=lembs,
+                lids=lids,
+                labels=labels)
+        else:
+            mlm_loss = torch.tensor(0.).to(ys.device)
+
+        if self.use_mlm_loss and is_empty:
+            loss = mlm_loss
+            stats = dict(mlm_loss=mlm_loss.item())
+            return loss, stats, None
+
         # calculate transformer outputs
-        after_outs, before_outs, logits, mlm_loss = self._forward(
+        after_outs, before_outs, logits = self._forward(
             xs=xs,
             ilens=ilens,
             ys=ys,
             olens=olens,
             spembs=spembs,
             sids=sids,
+            lembs=lembs,
             lids=lids,
         )
 
@@ -653,6 +704,21 @@ class Transformer(AbsTTS):
             return loss, stats, weight
         else:
             return loss, stats, after_outs
+    
+    def _mlm_forward(
+        self,
+        xs: torch.Tensor,
+        ilens: torch.Tensor):
+        xs_mlm = xs.clone()
+        ilens_mlm = ilens.clone()
+        x_masks_mlm = self._source_mask(ilens_mlm)
+        xs_masked_mlm, mlm_target = self._bert_mask(xs_mlm, ilens_mlm)
+        hs_mlm, _ = self.encoder(xs_masked_mlm, x_masks_mlm)
+        prediction_scores = self.mlm_head(hs_mlm)
+        mlm_loss = self.mlm_criterion(
+            prediction_scores.view(-1, self.idim),
+            mlm_target.view(-1))
+        return mlm_loss
 
     def _forward(
         self,
@@ -662,22 +728,16 @@ class Transformer(AbsTTS):
         olens: torch.Tensor,
         spembs: torch.Tensor,
         sids: torch.Tensor,
-        lids: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        lembs: torch.Tensor,
+        lids: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
         # forward encoder
         x_masks = self._source_mask(ilens)
-
-        # Applying bert mask
-        if self.use_mlm_loss:
-            xs_masked, mask_pos = self._bert_mask(xs, ilens)
 
         if self.lang_family_encoding:
             hs, h_masks = self._multiple_encoding(xs, x_masks, lids)
         else:
             hs, h_masks = self.encoder(xs, x_masks)
-
-        if self.use_mlm_loss:
-            hs_mlm, _ = self.encoder(xs_masked, x_masks)
 
         # integrate with GST
         if self.use_gst:
@@ -696,6 +756,9 @@ class Transformer(AbsTTS):
         # integrate speaker embedding
         if self.spk_embed_dim is not None:
             hs = self._integrate_with_spk_embed(hs, spembs)
+        
+        if self.lang_embed_dim is not None:
+            hs = self._integrate_with_lang_embed(hs, lembs)
 
         # thin out frames for reduction factor
         # (B, T_feats, odim) ->  (B, T_feats//r, odim)
@@ -723,16 +786,40 @@ class Transformer(AbsTTS):
             after_outs = before_outs + self.postnet(
                 before_outs.transpose(1, 2)
             ).transpose(1, 2)
-        
-        if self.use_mlm_loss:
-            mlm_loss = self.mlm_criterion(
-                torch.masked_select(hs, mask_pos.unsqueeze(-1)),
-                torch.masked_select(hs_mlm, mask_pos.unsqueeze(-1)))
+
+        return after_outs, before_outs, logits
+
+    def _select_holdin_langs(
+        self,
+        xs: torch.Tensor,
+        ilens: torch.Tensor,
+        ys: torch.Tensor,
+        olens: torch.Tensor,
+        spembs: torch.Tensor,
+        sids: torch.Tensor,
+        lembs: torch.Tensor,
+        lids: torch.Tensor,
+        labels: torch.Tensor):
+        # Selecting batch index corresponding to hold-in languages
+        if len(lids.shape) == 1:
+            lids_tmp = lids.unsqueeze(1)
         else:
-            mlm_loss = torch.tensor(0.0).to(xs.device)
-
-        return after_outs, before_outs, logits, mlm_loss
-
+            lids_tmp = lids
+        cond = torch.any((lids_tmp == self.holdout_lids), dim=1)
+        holdin_idx = torch.argwhere(~cond).squeeze()
+        is_empty = False
+        out = ()
+        for item in (xs, ilens, ys, olens, spembs, sids, lembs, lids, labels):
+            if len(holdin_idx.shape) == 0:
+                if item is not None:
+                    item = item[holdin_idx].unsqueeze(0)
+            elif len(holdin_idx) == 0:
+                is_empty = True
+            elif item is not None:
+                item = item[holdin_idx]
+            out += (item,)
+        out += (is_empty,)
+        return out
 
     def _multiple_encoding(
         self, xs: torch.Tensor, x_masks: torch.Tensor, lids: torch.Tensor
@@ -757,6 +844,7 @@ class Transformer(AbsTTS):
         feats: Optional[torch.Tensor] = None,
         spembs: Optional[torch.Tensor] = None,
         sids: Optional[torch.Tensor] = None,
+        lembs: Optional[torch.Tensor] = None,
         lids: Optional[torch.Tensor] = None,
         threshold: float = 0.5,
         minlenratio: float = 0.0,
@@ -771,6 +859,7 @@ class Transformer(AbsTTS):
                 (T_feats', idim).
             spembs (Optional[Tensor]): Speaker embedding (spk_embed_dim,).
             sids (Optional[Tensor]): Speaker ID (1,).
+            lembs (Optional[Tensor]): Language embedding (lang_embed_dim,).
             lids (Optional[Tensor]): Language ID (1,).
             threshold (float): Threshold in inference.
             minlenratio (float): Minimum length ratio in inference.
@@ -787,6 +876,7 @@ class Transformer(AbsTTS):
         x = text
         y = feats
         spemb = spembs
+        lemb = lembs
 
         # add eos at the last of sequence
         x = F.pad(x, [0, 1], "constant", self.eos)
@@ -798,6 +888,7 @@ class Transformer(AbsTTS):
             # get teacher forcing outputs
             xs, ys = x.unsqueeze(0), y.unsqueeze(0)
             spembs = None if spemb is None else spemb.unsqueeze(0)
+            lembs = None if lemb is None else lemb.unsqueeze(0)
             ilens = x.new_tensor([xs.size(1)]).long()
             olens = y.new_tensor([ys.size(1)]).long()
             outs, *_ = self._forward(
@@ -807,8 +898,11 @@ class Transformer(AbsTTS):
                 olens=olens,
                 spembs=spembs,
                 sids=sids,
+                lembs=lembs,
                 lids=lids,
             )
+            if outs is None:
+                return dict(feats_gen=None, att_w=None)
 
             # get attention weights
             att_ws = []
@@ -842,6 +936,11 @@ class Transformer(AbsTTS):
         if self.spk_embed_dim is not None:
             spembs = spemb.unsqueeze(0)
             hs = self._integrate_with_spk_embed(hs, spembs)
+
+        # Integrate language embedding
+        if self.lang_embed_dim is not None:
+            lembs = lemb.unsqueeze(0)
+            hs = self._integrate_with_lang_embed(hs, lembs)
 
         # set limits of length
         maxlen = int(hs.size(1) * maxlenratio / self.reduction_factor)
@@ -989,6 +1088,31 @@ class Transformer(AbsTTS):
 
         return hs
 
+    def _integrate_with_lang_embed(
+        self, hs: torch.Tensor, lembs: torch.Tensor
+    ) -> torch.Tensor:
+        """Integrate language embedding with hidden states.
+
+        Args:
+            hs (Tensor): Batch of hidden state sequences (B, Tmax, adim).
+            lembs (Tensor): Batch of language embeddings (B, lang_embed_dim).
+
+        Returns:
+            Tensor: Batch of integrated hidden state sequences (B, Tmax, adim).
+        """
+        if self.lang_embed_integration_type == "add":
+            # apply projection and then add to hidden states
+            lembs = self.lang_projection(F.normalize(lembs))
+            hs = hs + lembs.unsqueeze(1)
+        elif self.lang_embed_integration_type == "concat":
+            # concat hidden states with spk embeds and then apply projection
+            lembs = F.normalize(lembs).unsqueeze(1).expand(-1, hs.size(1), -1)
+            hs = self.lang_projection(torch.cat([hs, lembs], dim=-1))
+        else:
+            raise NotImplementedError("support only add or concat.")
+
+        return hs
+
     def _bert_mask(self, xs, ilens):
         """Make masks for masked language modeling.
 
@@ -1029,7 +1153,11 @@ class Transformer(AbsTTS):
         xs_masked = xs_masked.masked_fill_(mask_rep, rep_id)
         xs_masked = xs_masked * src_mask
 
-        return xs_masked, mask_pos
+        # mlm target (ignoring unmasked elements)
+        mlm_target = xs_masked.clone().masked_fill_(
+            ~mask_pos, self.ignore_idx
+        )
+        return xs_masked, mlm_target
 
 
 class EncoderWithLid(Encoder):
@@ -1113,3 +1241,39 @@ class EncoderWithLid(Encoder):
         if self.normalize_before:
             xs = self.after_norm(xs)
         return xs, masks, new_cache
+
+
+class BertPredictionHeadTransform(torch.nn.Module):
+    def __init__(self, hidden_size):
+        super().__init__()
+        self.dense = torch.nn.Linear(hidden_size, hidden_size)
+        self.transform_act_fn = self.gelu_new
+        self.LayerNorm = torch.nn.LayerNorm(hidden_size, eps=1e-12)
+
+    def gelu_new(self, x):
+        """ Implementation of the gelu activation function currently in Google Bert repo (identical to OpenAI GPT).
+        Also see https://arxiv.org/abs/1606.08415
+        """
+        return 0.5 * x * (1 + torch.tanh(math.sqrt(2 / math.pi) * (x + 0.044715 * torch.pow(x, 3))))
+
+    def forward(self, hidden_states):
+        hidden_states = self.dense(hidden_states)
+        hidden_states = self.transform_act_fn(hidden_states)
+        hidden_states = self.LayerNorm(hidden_states)
+        return hidden_states
+
+
+class BertLMPredictionHead(torch.nn.Module):
+    def __init__(self, hidden_size, vocab_size):
+        super().__init__()
+        self.transform = BertPredictionHeadTransform(hidden_size)
+
+        # The output weights are the same as the input embeddings, but there is
+        # an output-only bias for each token.
+        self.decoder = torch.nn.Linear(hidden_size, vocab_size, bias=False)
+        self.bias = torch.nn.Parameter(torch.zeros(vocab_size))
+
+    def forward(self, hidden_states):
+        hidden_states = self.transform(hidden_states)
+        hidden_states = self.decoder(hidden_states) + self.bias
+        return hidden_states

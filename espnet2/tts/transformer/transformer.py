@@ -479,7 +479,8 @@ class Transformer(AbsTTS):
             if not self.lang_family_encoding:
                 self.encoder.embed[-1].alpha.data = torch.tensor(init_enc_alpha)
             else:
-                for idx in range(self.num_lang_family):
+                for i in range(self.num_lang_family):
+                    idx = max(0, i-1)
                     self.encoder[idx].embed[-1].alpha.data = torch.tensor(init_enc_alpha)
             self.decoder.embed[-1].alpha.data = torch.tensor(init_dec_alpha)
 
@@ -626,6 +627,8 @@ class Transformer(AbsTTS):
                 else:
                     enc_attn_loss = torch.zeros_like(loss)
                     idxes = [int(x) for x in torch.unique(lids).tolist()]
+                    # Merging lid=1 and lid=0 (lid=0 is unk)
+                    idxes = list(set([max(0, x-1) for x in idxes]))
                     for lidx in idxes:
                         att_ws = []
                         for idx, layer_idx in enumerate(
@@ -688,6 +691,8 @@ class Transformer(AbsTTS):
             else:
                 encoder_alpha = 0.
                 idxes = [int(x) for x in torch.unique(lids).tolist()]
+                # Merging lid=1 and lid=0 (lid=0 is unk)
+                idxes = list(set([max(0, x-1) for x in idxes]))
                 for lidx in idxes:
                     encoder_alpha += self.encoder[lidx].embed[-1].alpha.item()
                 encoder_alpha /= len(idxes)
@@ -825,9 +830,10 @@ class Transformer(AbsTTS):
         self, xs: torch.Tensor, x_masks: torch.Tensor, lids: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         # forward encoder
-        for i, idx in enumerate(
-            [int(x) for x in torch.unique(lids).tolist()]
-        ):
+        idxes = [int(x) for x in torch.unique(lids).tolist()]
+        # Merging lid=1 and lid=0 (lid=0 is unk)
+        idxes = list(set([max(0, x-1) for x in idxes]))
+        for i, idx in enumerate(idxes):
             if i == 0:
                 hs_tmp, h_masks = self.encoder[idx](xs, x_masks)
                 hs_out = torch.zeros_like(hs_tmp)

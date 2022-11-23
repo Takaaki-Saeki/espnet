@@ -1,7 +1,7 @@
 import pathlib
 import argparse
 import tqdm
-from transphone.g2p import read_g2p
+from transphone import read_tokenizer
 from collections import defaultdict
 
 def langtable_mailabs():
@@ -39,12 +39,8 @@ def get_p2p(lang2code):
         lcode = lang2code[key]
         inv = read_inventory(lcode)
         phone2phoneme = inv.phone2phoneme
+        phoneme2phone = inv.phoneme2phone
         d_phone2phoneme[lcode] = phone2phoneme
-        phoneme2phone = defaultdict(list)
-        for key in phone2phoneme.keys():
-            phonemes = phone2phoneme[key]
-            for phoneme in phonemes:
-                phoneme2phone[phoneme].append(key)
         d_phoneme2phone[lcode] = phoneme2phone
     return d_phone2phoneme, d_phoneme2phone
 
@@ -55,8 +51,6 @@ def main():
     parser.add_argument("--in_tsv",required=True, type=pathlib.Path)
     parser.add_argument("--data_type",required=True, type=str, choices=["mailabs", "css10", "fleurs"])
     args = parser.parse_args()
-
-    model = read_g2p()
 
     lang2code = {}
     with open(lang_table_path, "r") as fr:
@@ -91,6 +85,8 @@ def main():
         text = line_list[4]
         lcode = lang2code[lang]
         words = text.strip().split()
+
+        tokenizer = read_tokenizer(lcode)
         
         out_list = {}
         for name in ["phn", "tphn", "bphn", "btphn"]:
@@ -103,16 +99,15 @@ def main():
             # adding boundary token for byte and tphn
             out_list["bphn"].append("<bnd>")
             out_list["btphn"].append("<bnd>")
-            tphn = model.inference_word(word, target_langs=None, lang_id=lcode)
-            phn = [
-                phoneme2phone[lcode][w][0] if w in phoneme2phone[lcode] else "<unk>" for w in tphn
-            ]
+            tphn = tokenizer.tokenize(word)
+            # Ignoring unknown in phoneme2phone
+            phn = [phoneme2phone[lcode][w][0] for w in tphn if w in phoneme2phone[lcode]]
             out_list["bphn"] += phn
             out_list["bphn"].append("<space>")
             out_list["btphn"] += tphn
             out_list["btphn"].append("<space>")
-            out_list["phn"].append("".join(phn))
-            out_list["tphn"].append("".join(tphn))
+            out_list["phn"].append("".join(phn).strip())
+            out_list["tphn"].append("".join(tphn).strip())
         out_list["bphn"] = out_list["bphn"][:-1]
         out_list["btphn"] = out_list["btphn"][:-1]
         for name in ["phn", "tphn", "bphn", "btphn"]:

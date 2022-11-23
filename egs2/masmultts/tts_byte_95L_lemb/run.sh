@@ -70,6 +70,7 @@ test_sets=test
     --use_xvector true \
     --xvector_tool rawnet \
     --use_lvector \
+    --lvector_feats_type fam \
     --token_type "${model_token_type}" \
     --cleaner "${cleaner}" \
     --g2p "${g2p}" \

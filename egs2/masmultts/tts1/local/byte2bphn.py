@@ -61,13 +61,13 @@ def main():
     with open(args.in_tsv, "r") as fr:
         in_list = [line.strip() for line in fr]
 
+    _, phoneme2phone = get_p2p(lang2code)
+
+    out_data = {}
     out_names = {}
     for name in ["phn", "tphn", "bphn", "btphn"]:
         out_names[name] = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + f"_{name}.tsv"
-        with open(out_names[name], "w") as fw:
-            pass
-
-    _, phoneme2phone = get_p2p(lang2code)
+        out_data[name] = []
 
     for line in tqdm.tqdm(in_list):
         line_list = line.strip().split("\t")
@@ -113,10 +113,11 @@ def main():
         for name in ["phn", "tphn", "bphn", "btphn"]:
             processed_text = " ".join(out_list[name])
             out_line_list = [uttid, wavpath, lang, spk, processed_text]
-
-            with open(out_names[name], "a") as fw:
-                fw.write("\t".join(out_line_list))
-                fw.write("\n")
+            out_data[name].append("\t".join(out_line_list))
+    
+    for name in ["phn", "tphn", "bphn", "btphn"]:
+        with open(out_names[name], "w") as fw:
+            fw.write("\n".join(out_data[name]))
 
 if __name__ == "__main__":
     main()

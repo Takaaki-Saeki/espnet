@@ -1,6 +1,8 @@
 import pathlib
 import argparse
 import tqdm
+import math
+import os
 from transphone import read_tokenizer
 from collections import defaultdict
 
@@ -50,6 +52,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--in_tsv",required=True, type=pathlib.Path)
     parser.add_argument("--data_type",required=True, type=str, choices=["mailabs", "css10", "fleurs"])
+    parser.add_argument("--index", required=False, default=None, type=int)
     args = parser.parse_args()
 
     lang2code = {}
@@ -63,13 +66,29 @@ def main():
 
     _, phoneme2phone = get_p2p(lang2code)
 
+    if args.index is not None:
+        assert args.index >= 0
+        assert args.index <= 3
+        dev = math.ceil(len(in_list) / 4)
+        process_list = in_list[dev*args.index : dev*(args.index+1)]
+        print(f"Processing idx: {dev*args.index} to idx: {dev*(args.index+1)-1} of all {len(in_list)} files")
+        f_suffix = f"_{args.index}"
+    else:
+        print(f"Processing all {len(in_list)} files")
+        process_list = in_list
+        f_suffix = ""
+
     out_data = {}
     out_names = {}
     for name in ["phn", "tphn", "bphn", "btphn"]:
-        out_names[name] = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + f"_{name}.tsv"
+        out_names[name] = args.in_tsv.stem.strip().rsplit("_", maxsplit=1)[0] + f"_{name}{f_suffix}.tsv"
         out_data[name] = []
 
-    for line in tqdm.tqdm(in_list):
+    out_dir = pathlib.Path(f"{args.data_type}_tsv")
+
+    os.makedirs(out_dir, exist_ok=True)
+
+    for line in tqdm.tqdm(process_list):
         line_list = line.strip().split("\t")
         if len(line_list) < 5:
             # Filtering out lines with less than 5 columns
@@ -116,7 +135,7 @@ def main():
             out_data[name].append("\t".join(out_line_list))
     
     for name in ["phn", "tphn", "bphn", "btphn"]:
-        with open(out_names[name], "w") as fw:
+        with open(out_dir / out_names[name], "w") as fw:
             fw.write("\n".join(out_data[name]))
 
 if __name__ == "__main__":

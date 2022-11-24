@@ -118,9 +118,14 @@ def main():
             # adding boundary token for byte and tphn
             out_list["bphn"].append("<bnd>")
             out_list["btphn"].append("<bnd>")
-            tphn = tokenizer.tokenize(word)
+            try:
+                tphn = tokenizer.tokenize(word)
+                phn = [phoneme2phone[lcode][w][0] for w in tphn if w in phoneme2phone[lcode]]
+            except:
+                # In jpn, the tokenizer sometimes fails.
+                tphn = ["<unk>"]
+                phn = ["<unk>"]
             # Ignoring unknown in phoneme2phone
-            phn = [phoneme2phone[lcode][w][0] for w in tphn if w in phoneme2phone[lcode]]
             out_list["bphn"] += phn
             out_list["bphn"].append("<space>")
             out_list["btphn"] += tphn

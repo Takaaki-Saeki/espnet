@@ -18,7 +18,7 @@ use_lid=false
 mos_filtering=true
 lang_set="lang_set.txt"
 do_trimming=false
-lang_family=true
+lang_family=false
 #########################################################
 
 local_data_opts=""

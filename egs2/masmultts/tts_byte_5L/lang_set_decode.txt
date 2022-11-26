@@ -1,0 +1,11 @@
+fr_fr
+de_de
+ru_ru
+es_419
+en_us
+el_gr
+pl_pl
+tr_tr
+af_za
+ur_pk
+vi_vn

@@ -69,7 +69,7 @@ test_sets=test
     --n_shift "${n_shift}" \
     --use_xvector true \
     --xvector_tool rawnet \
-    --use_lvector \
+    --use_lvector true \
     --lvector_feats_type fam \
     --token_type "${model_token_type}" \
     --cleaner "${cleaner}" \

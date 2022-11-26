@@ -10,7 +10,7 @@ n_fft=1024
 n_shift=256
 
 ################# Configs to be set #####################
-token_type=tphn   # byte, tphn, phn, bphn
+token_type=bphn   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
 use_fleurs=true

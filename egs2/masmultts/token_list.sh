@@ -1,5 +1,5 @@
 ##########################
-token_type=phn
+token_type=bphn
 ##########################
 
 dirname="token_${token_type}"

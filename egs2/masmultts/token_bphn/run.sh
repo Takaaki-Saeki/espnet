@@ -10,13 +10,13 @@ n_fft=1024
 n_shift=256
 
 ################# Configs to be set #####################
-token_type=tphn   # byte, tphn, phn, bphn
+token_type=bphn   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
 use_fleurs=true
 use_lid=true
 use_lvector=false
-mos_filtering=true
+mos_filtering=false
 lang_set="lang_set.txt"
 do_trimming=false
 lang_family=false
@@ -74,7 +74,7 @@ test_sets=test
     --fs "${fs}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
-    --use_xvector true \
+    --use_xvector false \
     --xvector_tool rawnet \
     --use_lvector ${use_lvector} \
     --lvector_feats_type fam \

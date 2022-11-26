@@ -10,13 +10,14 @@ n_fft=1024
 n_shift=256
 
 ################# Configs to be set #####################
-token_type=tphn
+token_type=tphn   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
 use_fleurs=true
 use_lid=true
+use_lvector=false
 mos_filtering=false
-lang_set=null
+lang_set="lang_set.txt"
 do_trimming=false
 lang_family=false
 #########################################################
@@ -47,8 +48,14 @@ if [ ${token_type} = "byte" ]; then
 elif [ ${token_type} = "tphn" ]; then
     model_token_type=char
     g2p=none
+elif [ ${token_type} = "phn" ]; then
+    model_token_type=char
+    g2p=none
+elif [ ${token_type} = "bphn" ]; then
+    model_token_type=word
+    g2p=none
 else
-    echo "Error: token_type must be either byte or tphn"
+    echo "Error: token_type must be either byte, tphn, phn, or bphn"
     exit 1
 fi
 
@@ -67,8 +74,10 @@ test_sets=test
     --fs "${fs}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
-    --use_xvector true \
+    --use_xvector false \
     --xvector_tool rawnet \
+    --use_lvector ${use_lvector} \
+    --lvector_feats_type fam \
     --token_type "${model_token_type}" \
     --cleaner "${cleaner}" \
     --g2p "${g2p}" \

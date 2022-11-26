@@ -242,7 +242,7 @@ def merge_data(data_types):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--db_dir",required=True, type=pathlib.Path)
-    parser.add_argument("--token_type", required=True, type=str, choices=["byte", "tphn"])
+    parser.add_argument("--token_type", required=True, type=str, choices=["byte", "tphn", "phn", "bphn"])
     parser.add_argument("--use_mailabs", action="store_true")
     parser.add_argument("--use_fleurs", action="store_true")
     parser.add_argument("--use_css10", action="store_true")
@@ -255,8 +255,8 @@ def main():
 
     if args.token_type == "byte":
         suffix = "_norm"
-    if args.token_type == "tphn":
-        suffix = "_tphn"
+    else:
+        suffix = f"_{args.token_type}"
 
     if args.use_mailabs:
         print("Processing M-AILABS ...")

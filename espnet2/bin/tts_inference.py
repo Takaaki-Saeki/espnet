@@ -152,6 +152,7 @@ class Text2Speech:
         durations: Union[torch.Tensor, np.ndarray] = None,
         spembs: Union[torch.Tensor, np.ndarray] = None,
         sids: Union[torch.Tensor, np.ndarray] = None,
+        lembs: Union[torch.Tensor, np.ndarray] = None,
         lids: Union[torch.Tensor, np.ndarray] = None,
         decode_conf: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, torch.Tensor]:
@@ -167,6 +168,8 @@ class Text2Speech:
             raise RuntimeError("Missing required argument: 'lids'")
         if self.use_spembs and spembs is None:
             raise RuntimeError("Missing required argument: 'spembs'")
+        if self.use_lembs and lembs is None:
+            raise RuntimeError("Missing required argument: 'lembs'")
 
         # prepare batch
         if isinstance(text, str):
@@ -180,6 +183,8 @@ class Text2Speech:
             batch.update(spembs=spembs)
         if sids is not None:
             batch.update(sids=sids)
+        if lembs is not None:
+            batch.update(lembs=lembs)
         if lids is not None:
             batch.update(lids=lids)
         batch = to_device(batch, self.device)
@@ -243,6 +248,11 @@ class Text2Speech:
     def use_spembs(self) -> bool:
         """Return spemb is needed or not in the inference."""
         return self.tts.spk_embed_dim is not None
+
+    @property
+    def use_lembs(self) -> bool:
+        """Return lemb is needed or not in the inference."""
+        return self.tts.lang_embed_dim is not None
 
     @staticmethod
     def from_pretrained(

@@ -1,10 +1,10 @@
 #############################
-name="tts_byte_c"
+name="tts_byte_1L_es"
 token="byte"
 train_args=""
 
 # If using fine-tuning
-train_args="--init_param ../tts_pre_byte_m_en/exp/tts_train_raw_byte/train.loss.best.pth:::tts.lid_emb"
+train_args="--init_param ../tts_pre_byte_m_en/exp/tts_train_raw_byte/valid.loss.best.pth:::tts.lid_emb"
 #############################
 
 datadir="data"

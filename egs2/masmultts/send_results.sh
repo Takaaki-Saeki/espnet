@@ -1,5 +1,5 @@
 #######################
-dir_name="tts_byte_lfam_c"
+dir_name="tts_pre_byte_m_en"
 train_name="tts_train_raw_byte"
 #######################
 
@@ -30,5 +30,6 @@ fi
 for fname in config.yaml train.log latest.pth train.loss.best.pth valid.loss.best.pth; do
     scp "${abci_base}/${dir_name}/exp/${train_name}/${fname}" "${base}/${dir_name}/exp/${train_name}/${fname}"
 done
+scp "${abci_base}/${dir_name}/exp/${train_name}/images/loss.png" "${base}/${dir_name}/exp/${train_name}/loss.png"
 
 echo "Successfully finished!"

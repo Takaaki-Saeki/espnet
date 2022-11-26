@@ -57,7 +57,7 @@ tts_conf:                  # keyword arguments for the selected model
     modules_applied_guided_attn: ["encoder-decoder"] # modules to apply guided attention loss
     guided_attn_loss_sigma: 0.4                      # sigma in guided attention loss
     guided_attn_loss_lambda: 10.0                    # lambda in guided attention loss
-    langs: null
+    langs: 2
     lang_family_encoding: False
     num_lang_family: -1
 
@@ -70,19 +70,19 @@ optim_conf:             # keyword arguments for selected optimizer
 scheduler: noamlr       # scheduler type
 scheduler_conf:         # keyword arguments for selected scheduler
     model_size: 512     # model size, a.k.a., attention dimenstion
-    warmup_steps: 100000 # the number of warmup steps
+    warmup_steps: 50000 # the number of warmup steps
 
 ##########################################################
 #                OTHER TRAINING SETTING                  #
 ##########################################################
-num_iters_per_epoch: 100000 # number of iterations per epoch
+num_iters_per_epoch: 4000   # number of iterations per epoch
 max_epoch: 1000             # number of epochs
 grad_clip: 2.0              # gradient clipping norm
 # grad_clip: 1.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 2               # gradient accumulation
 # batch_bins: 9000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
-batch_bins: 400000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
+batch_bins: 600000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
 batch_type: numel           # how to make batch
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches

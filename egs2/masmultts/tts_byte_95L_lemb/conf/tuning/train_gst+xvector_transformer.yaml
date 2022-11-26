@@ -69,7 +69,7 @@ optim_conf:             # keyword arguments for selected optimizer
 scheduler: noamlr       # scheduler type
 scheduler_conf:         # keyword arguments for selected scheduler
     model_size: 512     # model size, a.k.a., attention dimenstion
-    warmup_steps: 50000 # the number of warmup steps
+    warmup_steps: 100000 # the number of warmup steps
 
 ##########################################################
 #                OTHER TRAINING SETTING                  #

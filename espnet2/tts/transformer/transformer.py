@@ -535,9 +535,8 @@ class Transformer(AbsTTS):
         if self.use_mlm_loss:
             mlm_loss = self._mlm_forward(xs=xs, ilens=ilens)
             (
-                xs, ilens, ys, olens,
-                spembs, sids, lembs, lids, labels,
-                is_empty
+                xs, ilens, ys, olens, spembs, sids,
+                lembs, lids, labels, batch_size, is_empty
             ) = self._select_holdin_langs(
                 xs=xs,
                 ilens=ilens,
@@ -813,18 +812,30 @@ class Transformer(AbsTTS):
         cond = torch.any((lids_tmp == self.holdout_lids), dim=1)
         holdin_idx = torch.argwhere(~cond).squeeze()
         is_empty = False
-        out = ()
-        for item in (xs, ilens, ys, olens, spembs, sids, lembs, lids, labels):
+        out = []
+        batch_size = None
+        for item in (xs, ilens, ys, olens, spembs, sids, lembs, lids):
             if len(holdin_idx.shape) == 0:
                 if item is not None:
                     item = item[holdin_idx].unsqueeze(0)
+                    batch_size = 1
             elif len(holdin_idx) == 0:
                 is_empty = True
+                batch_size = 0
             elif item is not None:
                 item = item[holdin_idx]
-            out += (item,)
-        out += (is_empty,)
-        return out
+                batch_size = len(holdin_idx)
+            out += [item,]
+        # Length of xs
+        xs, ilens, ys, olens = out[:4]
+        xs = xs[:, :ilens.max()]
+        ys = ys[:, :olens.max()]
+        # Recreate labels for stop prediction
+        labels = make_pad_mask(olens - 1).to(ys.device, ys.dtype)
+        labels = F.pad(labels, [0, 1], "constant", 1.0)
+        if not is_empty:
+            assert batch_size == xs.shape[0]
+        return (xs, ilens, ys, olens, out[4], out[5], out[6], out[7], labels, batch_size, is_empty)
 
     def _multiple_encoding(
         self, xs: torch.Tensor, x_masks: torch.Tensor, lids: torch.Tensor
@@ -842,7 +853,6 @@ class Transformer(AbsTTS):
             mask = (lids == idx).unsqueeze(-1)
             hs_out += (hs_tmp * mask)
         return hs_out, h_masks
-
 
     def inference(
         self,

@@ -16,7 +16,7 @@ from espnet2.tts.transformer import Transformer
     "spks, langs, use_gst, lang_family_encoding, num_lang_family, use_mlm_loss, holdout_lids",
     [
         (-1, -1, False, False, -1, False, None),
-        (10, 7, True, False, -1, False, "3 4"),
+        (10, 7, True, False, -1, True, "3 4"),
         (10, 7, True, True, 7, False, None)
     ],
 )

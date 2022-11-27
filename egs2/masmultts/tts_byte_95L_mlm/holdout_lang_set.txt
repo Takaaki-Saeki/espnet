@@ -1,0 +1,6 @@
+el_gr
+pl_pl
+tr_tr
+af_za
+ur_pk
+vi_vn

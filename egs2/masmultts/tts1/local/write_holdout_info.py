@@ -21,20 +21,16 @@ def main():
     lang2lid = {}
     with open(args.org_dir / "train" / "lang2lid", "r") as fr:
         for line in fr:
-            line_list = line.stirp().split()
-        lang2lid[line_list[0]] = line_list[1]
-    with open(args.org_dir / "dev" / "lang2lid", "r") as fr:
-        for line in fr:
-            line_list = line.stirp().split()
-            lid = lang2lid[line_list[0]]
-            assert lid == line_list[1], "lid is not matched between train and dev."
+            line_list = line.strip().split()
+            lang2lid[line_list[0]] = line_list[1]
     for hol in ho_langs:
         assert hol in langs, f"{hol} is not in lang_set."
 
     # Writing holdout information
     holdout_lids = [lang2lid[lang] for lang in ho_langs]
     config["tts_conf"]["holdout_lids"] = " ".join(holdout_lids)
-    with open(args.config, "w") as fw:
+    out_path = args.config.parent / (args.config.stem+"_override.yaml")
+    with open(out_path, "w") as fw:
         yaml.safe_dump(config, fw)
 
 if __name__ == "__main__":

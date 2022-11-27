@@ -22,6 +22,7 @@ do_trimming=false
 lang_family=false
 #########################################################
 
+
 local_data_opts=""
 local_data_opts+=" --token_type ${token_type}"
 local_data_opts+=" --use_mailabs ${use_mailabs}"

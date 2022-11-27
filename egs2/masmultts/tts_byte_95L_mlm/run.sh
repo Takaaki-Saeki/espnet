@@ -52,8 +52,6 @@ else
     exit 1
 fi
 
-cp conf/train.yaml conf/train_override.yaml
-
 train_config=conf/train_override.yaml
 inference_config=conf/decode.yaml
 

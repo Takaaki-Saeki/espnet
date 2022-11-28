@@ -32,6 +32,7 @@ def main():
     out_path = args.config.parent / (args.config.stem+"_override.yaml")
     with open(out_path, "w") as fw:
         yaml.safe_dump(config, fw)
+    print(f"Successfully wrote holdout information to {out_path} !")
 
 if __name__ == "__main__":
     main()

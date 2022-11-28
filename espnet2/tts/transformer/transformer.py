@@ -398,6 +398,7 @@ class Transformer(AbsTTS):
                 vocab_size=idim)
             self.ignore_idx = -100
             self.mlm_criterion = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_idx)
+            assert len(holdout_lids.strip().split()) > 0, "holdout_lids must be specified when use_mlm_loss is True."
             self.holdout_lids = torch.tensor([int(x) for x in holdout_lids.strip().split()])
 
         # define transformer decoder
@@ -1074,6 +1075,7 @@ class Transformer(AbsTTS):
                      [1, 1, 1, 0, 0]]], dtype=torch.uint8)
 
         """
+        print(olens)
         y_masks = make_non_pad_mask(olens).to(next(self.parameters()).device)
         s_masks = subsequent_mask(y_masks.size(-1), device=y_masks.device).unsqueeze(0)
         return y_masks.unsqueeze(-2) & s_masks

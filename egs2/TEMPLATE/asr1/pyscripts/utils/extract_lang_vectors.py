@@ -63,7 +63,7 @@ def get_parser():
         "--feats_type",
         type=str,
         help="Feature type for Extracting language vectors.",
-        choices=["geo", "fam", "learned"],
+        choices=["geo", "fam", "learned", "inventory_knn", "syntax_knn", "phonology_knn"],
     )
     parser.add_argument("--verbose", type=int, default=1, help="Verbosity level.")
     parser.add_argument(

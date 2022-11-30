@@ -75,13 +75,14 @@ def langtable_css10():
     }
 
 class DataProcessor:
-    def __init__(self, data_type, tsv_path, token_type, mos_filtering=False, lang_set=None, lang_family=False):
+    def __init__(self, data_type, tsv_path, token_type, mos_filtering=False, lang_set=None, lang_family=False, byte_len_filtering=False):
         self.dst_dir = pathlib.Path("data")
         self.data_type = data_type
         self.tsv_path = tsv_path
         self.token_type = token_type
         self.mos_filtering = mos_filtering
         self.mos_thresh = 2.0
+        self.byte_len_thresh = 250
         self.seed = 0
 
         if lang_set is not None:
@@ -125,11 +126,32 @@ class DataProcessor:
                     mos_val = float(line_list[1])
                     if mos_val > self.mos_thresh:
                         self.mos_filtered_utt.add(uttid)
+        
+        self.byte_len_filtered_utt = None
+        if self.byte_len_filtering:
+            self.byte_len_filtered_utt = set()
+            tsv_path_norm = self.tsv_path.parent / f"{self.data_name}_norm.tsv"
+            with open(tsv_path_norm, "r") as fr:
+                for line in fr:
+                    line_list = line.strip().split("\t")
+                    if len(line_list) < 5:
+                        continue
+                    uttid = line_list[0]
+                    text = line_list[4]
+                    byte_len = len(list(text.encode("utf-8")))
+                    if byte_len <= self.byte_len_thresh:
+                        self.byte_len_filtered_utt.add(uttid)
 
     def get_mos_filtered_uttids(self, utt_list):
         print(f"Filtering utterances with MOS value: {self.mos_thresh}")
         out_utt_list = [
             uttid for uttid in utt_list if uttid in self.mos_filtered_utt]
+        return out_utt_list
+
+    def get_byte_len_filtered_uttids(self, utt_list):
+        print(f"Filtering utterances with byte lengths: {self.byte_len_thresh}")
+        out_utt_list = [
+            uttid for uttid in utt_list if uttid in self.byte_len_filtered_utt]
         return out_utt_list
 
     def remove_non_printable_chars(self, in_string):
@@ -193,11 +215,12 @@ class DataProcessor:
             uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
         
         for setname in ["train", "dev", "test"]:
+            utt_list = uttids_all[setname]
             if setname == "train" and self.mos_filtering:
-                utt_list = self.get_mos_filtered_uttids(uttids_all[setname])
-            else:
-                utt_list = uttids_all[setname]
-            
+                utt_list = self.get_mos_filtered_uttids(utt_list)
+            if setname == "train" and self.byte_len_filtering:
+                utt_list = self.get_byte_len_filtered_uttids(utt_list)
+
             utt2lang_list = []
             wavscp_list = []
             utt2spk_list = []
@@ -247,6 +270,7 @@ def main():
     parser.add_argument("--use_fleurs", action="store_true")
     parser.add_argument("--use_css10", action="store_true")
     parser.add_argument("--mos_filtering", action="store_true")
+    parser.add_argument("--byte_len_filtering", action="store_true")
     parser.add_argument("--lang_family", action="store_true")
     parser.add_argument("--lang_set", default=None, type=pathlib.Path)
     args = parser.parse_args()

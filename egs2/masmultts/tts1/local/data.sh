@@ -23,6 +23,7 @@ use_css10=false
 use_fleurs=false
 use_mailabs=false
 mos_filtering=true
+byte_len_filtering=true
 lang_set=null
 lang_family=false
 
@@ -41,6 +42,9 @@ if [ ${use_mailabs} = true ]; then
 fi
 if [ ${mos_filtering} = true ]; then
     opts_data+=" --mos_filtering"
+fi
+if [ ${byte_len_filtering} = true ]; then
+    opts_data+=" --byte_len_filtering"
 fi
 if [ ${lang_set} != null ]; then
     opts_data+=" --lang_set ${lang_set}"

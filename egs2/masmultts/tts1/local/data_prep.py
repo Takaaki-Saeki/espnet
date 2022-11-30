@@ -81,7 +81,7 @@ class DataProcessor:
         self.tsv_path = tsv_path
         self.token_type = token_type
         self.mos_filtering = mos_filtering
-        self.mos_thresh = 3.0
+        self.mos_thresh = 2.0
         self.seed = 0
 
         if lang_set is not None:

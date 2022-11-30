@@ -399,7 +399,9 @@ class Transformer(AbsTTS):
             self.ignore_idx = -100
             self.mlm_criterion = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_idx)
             assert len(holdout_lids.strip().split()) > 0, "holdout_lids must be specified when use_mlm_loss is True."
-            self.holdout_lids = torch.tensor([int(x) for x in holdout_lids.strip().split()])
+            self.holdout_lids = torch.tensor(
+                [int(x) for x in holdout_lids.strip().split()]
+            ).to(next(self.parameters()).device)
 
         # define transformer decoder
         if dprenet_layers != 0:

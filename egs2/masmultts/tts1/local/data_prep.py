@@ -81,6 +81,7 @@ class DataProcessor:
         self.tsv_path = tsv_path
         self.token_type = token_type
         self.mos_filtering = mos_filtering
+        self.byte_len_filtering = byte_len_filtering
         self.mos_thresh = 2.0
         self.byte_len_thresh = 250
         self.seed = 0
@@ -291,7 +292,8 @@ def main():
             args.token_type,
             args.mos_filtering,
             args.lang_set,
-            args.lang_family).process()
+            args.lang_family,
+            args.byte_len_filtering).process()
         data_types.append("mailabs")
     if args.use_fleurs:
         print("Processing FLEURS ...")
@@ -302,7 +304,8 @@ def main():
             args.token_type,
             args.mos_filtering,
             args.lang_set,
-            args.lang_family).process()
+            args.lang_family,
+            args.byte_len_filtering).process()
         data_types.append("fleurs")
     if args.use_css10:
         print("Processing CSS10 ...")
@@ -313,7 +316,8 @@ def main():
             args.token_type,
             args.mos_filtering,
             args.lang_set,
-            args.lang_family).process()
+            args.lang_family,
+            args.byte_len_filtering).process()
         data_types.append("css10")
     
     assert len(data_types) > 0, "No data type is specified."

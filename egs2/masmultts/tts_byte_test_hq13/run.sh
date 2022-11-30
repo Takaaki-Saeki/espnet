@@ -13,8 +13,8 @@ n_shift=256
 token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
-use_fleurs=true
-use_lid=true
+use_fleurs=false
+use_lid=false
 use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
@@ -61,7 +61,7 @@ else
     exit 1
 fi
 
-train_config=conf/train_override.yaml
+train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
 train_set=train
@@ -77,6 +77,8 @@ test_sets=test
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --use_xvector false \
+    --use_lvector ${use_lvector} \
+    --lvector_feats_type fam \
     --token_type "${model_token_type}" \
     --cleaner "${cleaner}" \
     --g2p "${g2p}" \

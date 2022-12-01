@@ -401,7 +401,7 @@ class Transformer(AbsTTS):
             assert len(holdout_lids.strip().split()) > 0, "holdout_lids must be specified when use_mlm_loss is True."
             self.holdout_lids = torch.tensor(
                 [int(x) for x in holdout_lids.strip().split()]
-            ).to(next(self.parameters()).device)
+            )
 
         # define transformer decoder
         if dprenet_layers != 0:
@@ -812,7 +812,7 @@ class Transformer(AbsTTS):
             lids_tmp = lids.unsqueeze(1)
         else:
             lids_tmp = lids
-        cond = torch.any((lids_tmp == self.holdout_lids), dim=1)
+        cond = torch.any((lids_tmp == self.holdout_lids.to(lids.device)), dim=1)
         holdin_idx = torch.argwhere(~cond).squeeze()
         is_empty = False
         out = []

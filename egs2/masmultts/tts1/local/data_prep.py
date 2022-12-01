@@ -75,7 +75,7 @@ def langtable_css10():
     }
 
 class DataProcessor:
-    def __init__(self, data_type, tsv_path, token_type, mos_filtering=False, lang_set=None, lang_family=False, byte_len_filtering=False):
+    def __init__(self, data_type, tsv_path, token_type, mos_filtering=False, lang_set=None, lang_family=None, byte_len_filtering=False):
         self.dst_dir = pathlib.Path("data")
         self.data_type = data_type
         self.tsv_path = tsv_path
@@ -92,10 +92,36 @@ class DataProcessor:
         else:
             self.lang_set = None
 
-        if lang_family:
-            self.lang2group = lang2group()
-        else:
+        self.lang2group = {}
+        if lang_family == "syntax":
+            print("Using syntax-based language family")
+            with open("local/syntax_group.csv", "r") as fr:
+                for line in fr:
+                    lang, family = line.strip().split(",")
+                    self.lang2group[lang] = family
+        elif lang_family == "phonology":
+            print("Using phonology-based language family")
+            with open("local/phonology_group.csv", "r") as fr:
+                for line in fr:
+                    lang, family = line.strip().split(",")
+                    self.lang2group[lang] = family
+        elif lang_family == "inventory":
+            print("Using inventory-based language family")
+            with open("local/inventory_group.csv", "r") as fr:
+                for line in fr:
+                    lang, family = line.strip().split(",")
+                    self.lang2group[lang] = family
+        elif lang_family == "tree":
+            print("Using tree-based language family")
+            with open("local/tree_group.csv", "r") as fr:
+                for line in fr:
+                    lang, family = line.strip().split(",")
+                    self.lang2group[lang] = family
+        elif lang_family == None:
             self.lang2group = None
+        else:
+            raise ValueError("Invalid lang_family")
+            
 
         if self.data_type == "mailabs":
             self.langtable = langtable_mailabs()
@@ -272,7 +298,7 @@ def main():
     parser.add_argument("--use_css10", action="store_true")
     parser.add_argument("--mos_filtering", action="store_true")
     parser.add_argument("--byte_len_filtering", action="store_true")
-    parser.add_argument("--lang_family", action="store_true")
+    parser.add_argument("--lang_family", required=False, default=None, type=str)
     parser.add_argument("--lang_set", default=None, type=pathlib.Path)
     args = parser.parse_args()
 

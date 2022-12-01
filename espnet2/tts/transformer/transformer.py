@@ -536,6 +536,7 @@ class Transformer(AbsTTS):
         labels = F.pad(labels, [0, 1], "constant", 1.0)
 
         if self.use_mlm_loss:
+            batch_size_org = batch_size
             mlm_loss = self._mlm_forward(xs=xs, ilens=ilens)
             (
                 xs, ilens, ys, olens, spembs, sids,
@@ -556,7 +557,10 @@ class Transformer(AbsTTS):
         if self.use_mlm_loss and is_empty:
             loss = mlm_loss
             stats = dict(mlm_loss=mlm_loss.item())
-            return loss, stats, None
+            loss, stats, weight = force_gatherable(
+                (loss, stats, batch_size_org), loss.device
+            )
+            return loss, stats, weight
 
         # calculate transformer outputs
         after_outs, before_outs, logits = self._forward(

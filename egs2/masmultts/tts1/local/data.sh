@@ -25,7 +25,7 @@ use_mailabs=false
 mos_filtering=true
 byte_len_filtering=true
 lang_set=null
-lang_family=false
+lang_family=null
 
 log "$0 $*"
 . utils/parse_options.sh
@@ -49,8 +49,8 @@ fi
 if [ ${lang_set} != null ]; then
     opts_data+=" --lang_set ${lang_set}"
 fi
-if [ ${lang_family} = true ]; then
-    opts_data+=" --lang_family"
+if [ ${lang_family} != null ]; then
+    opts_data+=" --lang_family ${lang_family}"
 fi
 
 

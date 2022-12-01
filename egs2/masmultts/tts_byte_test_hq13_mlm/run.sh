@@ -20,7 +20,7 @@ mos_filtering=false
 byte_len_filtering=true
 lang_set="lang_set.txt"
 do_trimming=false
-lang_family=false
+lang_family=null
 #########################################################
 
 local_data_opts=""

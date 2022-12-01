@@ -10,7 +10,7 @@ n_fft=1024
 n_shift=256
 
 ################# Configs to be set #####################
-token_type=phn   # byte, tphn, phn, bphn
+token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
 use_fleurs=false
@@ -20,7 +20,7 @@ mos_filtering=false
 byte_len_filtering=true
 lang_set="lang_set.txt"
 do_trimming=false
-lang_family=null
+lang_family=phonology
 #########################################################
 
 local_data_opts=""

@@ -124,6 +124,8 @@ class Transformer(AbsTTS):
         lang_family_encoding: bool = False,
         num_lang_family: int = -1,
         holdout_lids: str = None,
+        use_lid_loss: bool = False,
+        lid_loss_level: str = "utterance",
     ):
         """Initialize Transformer module.
 
@@ -218,6 +220,8 @@ class Transformer(AbsTTS):
             use_mlm_loss (bool): Whether to use masked language model loss.
             lang_family_encoding (bool): Whether to use language family encoding.
             num_lang_family (int): Number of language families.
+            holdout_lids (str): List of language ids to holdout.
+            use_lid_loss (bool): Whether to use language id loss.
         """
         assert check_argument_types()
         super().__init__()
@@ -244,6 +248,8 @@ class Transformer(AbsTTS):
             else:
                 self.num_heads_applied_guided_attn = num_heads_applied_guided_attn
             self.modules_applied_guided_attn = modules_applied_guided_attn
+        self.use_lid_loss = use_lid_loss
+        self.lid_loss_level = lid_loss_level
 
         # use idx 0 as padding idx
         self.padding_idx = 0
@@ -402,6 +408,12 @@ class Transformer(AbsTTS):
             self.holdout_lids = torch.tensor(
                 [int(x) for x in holdout_lids.strip().split()]
             )
+        
+        if self.use_lid_loss:
+            assert langs is not None, "langs must be specified when use_lid_loss is True."
+            assert lang_family_encoding is False, "Not supporting lang_family_encoding when use_lid_loss is True."
+            self.lid_net = LidPredictor(adim, langs, level=lid_loss_level)
+            self.lid_criterion = torch.nn.CrossEntropyLoss()
 
         # define transformer decoder
         if dprenet_layers != 0:
@@ -537,7 +549,7 @@ class Transformer(AbsTTS):
 
         if self.use_mlm_loss:
             batch_size_org = batch_size
-            mlm_loss = self._mlm_forward(xs=xs, ilens=ilens)
+            mlm_loss = self._mlm_forward(xs=xs, ilens=ilens, lids=lids)
             (
                 xs, ilens, ys, olens, spembs, sids,
                 lembs, lids, labels, batch_size, is_empty
@@ -563,7 +575,7 @@ class Transformer(AbsTTS):
             return loss, stats, weight
 
         # calculate transformer outputs
-        after_outs, before_outs, logits = self._forward(
+        after_outs, before_outs, logits, lid_loss = self._forward(
             xs=xs,
             ilens=ilens,
             ys=ys,
@@ -604,12 +616,15 @@ class Transformer(AbsTTS):
         
         # Adding mlm loss
         loss += mlm_loss
+        # Adding lid loss
+        loss += lid_loss
 
         stats = dict(
             l1_loss=l1_loss.item(),
             l2_loss=l2_loss.item(),
             bce_loss=bce_loss.item(),
-            mlm_loss=mlm_loss.item()
+            mlm_loss=mlm_loss.item(),
+            lid_loss=lid_loss.item(),
         )
 
         # calculate guided attention loss
@@ -719,7 +734,8 @@ class Transformer(AbsTTS):
     def _mlm_forward(
         self,
         xs: torch.Tensor,
-        ilens: torch.Tensor):
+        ilens: torch.Tensor,
+        lids: Optional[torch.Tensor] = None):
         xs_mlm = xs.clone()
         ilens_mlm = ilens.clone()
         x_masks_mlm = self._source_mask(ilens_mlm)
@@ -729,7 +745,31 @@ class Transformer(AbsTTS):
         mlm_loss = self.mlm_criterion(
             prediction_scores.view(-1, self.idim),
             mlm_target.view(-1))
+        if self.use_lid_loss:
+            lid_loss = self._calc_lid_loss(hs_mlm, lids)
+            mlm_loss += lid_loss
         return mlm_loss
+
+    def _calc_lid_loss(self, hs, lids):
+        print(f"hs: {hs.shape}")
+        predicted = self.lid_net(hs)
+        print(f"predicted: {predicted.shape}")
+        if self.lid_loss_level == "utterance":
+            if len(lids.shape) == 2:
+                target = lids.squeeze(1)
+            else:
+                target = lids
+            lid_loss = self.lid_criterion(predicted, target)
+        elif self.lid_loss_level == "token":
+            predicted = predicted.transpose(1, 2) # (batch, n_langs, seq_len)
+            if len(lids.shape) == 2:
+                target = lids.repeat(1, predicted.size(2))
+                print(f"target: {target.shape}")
+            else:
+                target = lids.unsqueeze(1).repeat(1, predicted.size(2))
+                print(f"target: {target.shape}")
+            lid_loss = self.lid_criterion(predicted, target)
+        return lid_loss
 
     def _forward(
         self,
@@ -749,6 +789,11 @@ class Transformer(AbsTTS):
             hs, h_masks = self._multiple_encoding(xs, x_masks, lids)
         else:
             hs, h_masks = self.encoder(xs, x_masks)
+        
+        if self.use_lid_loss:
+            lid_loss = self._calc_lid_loss(hs, lids)
+        else:
+            lid_loss = torch.tensor(0.).to(xs.device)
 
         # integrate with GST
         if self.use_gst:
@@ -798,7 +843,7 @@ class Transformer(AbsTTS):
                 before_outs.transpose(1, 2)
             ).transpose(1, 2)
 
-        return after_outs, before_outs, logits
+        return after_outs, before_outs, logits, lid_loss
 
     def _select_holdin_langs(
         self,
@@ -1300,3 +1345,102 @@ class BertLMPredictionHead(torch.nn.Module):
         hidden_states = self.transform(hidden_states)
         hidden_states = self.decoder(hidden_states) + self.bias
         return hidden_states
+
+
+class LidPredictor(torch.nn.Module):
+    """
+    Language ID predictor module based on convolution
+    """
+
+    def __init__(self, in_dim, n_langs, level="utterance"):
+        super().__init__()
+        self.conv_block_1 = ConvBlockRes1D(
+            in_channels=in_dim,
+            out_channels=512,
+            size=3)
+        self.conv_block_2 = ConvBlockRes1D(
+            in_channels=512,
+            out_channels=1024,
+            size=7)
+        self.conv_block_3 = ConvBlockRes1D(
+            in_channels=1024,
+            out_channels=1024,
+            size=7)
+        self.conv_block_4 = ConvBlockRes1D(
+            in_channels=1024,
+            out_channels=512,
+            size=3)
+        self.linear_out = torch.nn.Linear(
+            in_features=512,
+            out_features=n_langs,
+            bias=True)
+        assert level in ("utterance", "token")
+        self.level = level
+        if level == "utterance":
+            self.avgpool2d = torch.nn.AdaptiveAvgPool1d(1)
+
+    def forward(self, x):
+        """
+        Args:
+            output of analysis module: (batch, time, dim)
+        Return:
+            Prediction:
+                if level == "utterance": (batch, n_langs)
+                if level == "token": (batch, time, n_langs)
+        """
+        x = x.transpose(1, 2) # (batch, dim, time)
+        x = self.conv_block_1(x)
+        x = self.conv_block_2(x)
+        x = self.conv_block_3(x)
+        x = self.conv_block_4(x)
+        if self.level == "utterance":
+            x = self.avgpool2d(x)
+            x = self.linear_out(x.squeeze(2))
+        else:
+            x = x.transpose(1, 2)
+            x = self.linear_out(x)
+        return x
+
+class ConvBlockRes1D(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, size, momentum=0.01):
+        super().__init__()
+
+        pad = size // 2
+        self.conv1 = torch.nn.Conv1d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=size,
+            stride=1,
+            dilation=1,
+            padding=pad,
+            bias=False)
+        self.bn1 = torch.nn.BatchNorm1d(in_channels, momentum=momentum)
+        self.conv2 = torch.nn.Conv1d(
+            in_channels=out_channels,
+            out_channels=out_channels,
+            kernel_size=size,
+            stride=1,
+            dilation=1,
+            padding=pad,
+            bias=False)
+        self.bn2 = torch.nn.BatchNorm1d(out_channels, momentum=momentum)
+        if in_channels != out_channels:
+            self.shortcut = torch.nn.Conv1d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=1,
+                stride=1,
+                padding=0)
+            self.is_shortcut = True
+        else:
+            self.is_shortcut = False
+
+    def forward(self, x):
+        origin = x
+        x = self.conv1(F.leaky_relu(self.bn1(x), negative_slope=0.01))
+        x = self.conv2(F.leaky_relu(self.bn2(x), negative_slope=0.01))
+
+        if self.is_shortcut:
+            return self.shortcut(origin) + x
+        else:
+            return origin + x

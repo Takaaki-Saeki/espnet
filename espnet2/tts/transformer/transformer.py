@@ -9,6 +9,7 @@ from typing import Dict, Optional, Sequence, Tuple
 
 import torch
 import torch.nn.functional as F
+from torchmetrics import Accuracy
 from typeguard import check_argument_types
 
 from espnet2.torch_utils.device_funcs import force_gatherable
@@ -408,6 +409,10 @@ class Transformer(AbsTTS):
             self.holdout_lids = torch.tensor(
                 [int(x) for x in holdout_lids.strip().split()]
             )
+            self.accuracy = Accuracy(
+                task="multiclass",
+                num_classes=idim,
+                ignore_label=self.ignore_idx)
         
         if self.use_lid_loss:
             assert langs is not None, "langs must be specified when use_lid_loss is True."
@@ -549,7 +554,7 @@ class Transformer(AbsTTS):
 
         if self.use_mlm_loss:
             batch_size_org = batch_size
-            mlm_loss = self._mlm_forward(xs=xs, ilens=ilens, lids=lids)
+            mlm_loss, mlm_acc, lid_loss_mlm = self._mlm_forward(xs=xs, ilens=ilens, lids=lids)
             (
                 xs, ilens, ys, olens, spembs, sids,
                 lembs, lids, labels, batch_size, is_empty
@@ -565,10 +570,15 @@ class Transformer(AbsTTS):
                 labels=labels)
         else:
             mlm_loss = torch.tensor(0.).to(ys.device)
+            mlm_acc = torch.tensor(0.).to(ys.device)
+            lid_loss_mlm = torch.tensor(0.).to(ys.device)
 
         if self.use_mlm_loss and is_empty:
-            loss = mlm_loss
-            stats = dict(mlm_loss=mlm_loss.item())
+            loss = mlm_loss + lid_loss_mlm
+            stats = dict(
+                mlm_loss=mlm_loss.item(),
+                mlm_acc=mlm_acc.item(),
+                lid_loss_mlm=lid_loss_mlm.item())
             loss, stats, weight = force_gatherable(
                 (loss, stats, batch_size_org), loss.device
             )
@@ -614,17 +624,21 @@ class Transformer(AbsTTS):
         else:
             raise ValueError("unknown --loss-type " + self.loss_type)
         
-        # Adding mlm loss
-        loss += mlm_loss
         # Adding lid loss
         loss += lid_loss
+        # Adding mlm loss
+        loss += mlm_loss
+        # Adding lid loss with mlm
+        loss += lid_loss_mlm
 
         stats = dict(
             l1_loss=l1_loss.item(),
             l2_loss=l2_loss.item(),
             bce_loss=bce_loss.item(),
-            mlm_loss=mlm_loss.item(),
             lid_loss=lid_loss.item(),
+            mlm_loss=mlm_loss.item(),
+            mlm_acc=mlm_acc.item(),
+            lid_loss_mlm=lid_loss_mlm.item(),
         )
 
         # calculate guided attention loss
@@ -745,15 +759,17 @@ class Transformer(AbsTTS):
         mlm_loss = self.mlm_criterion(
             prediction_scores.view(-1, self.idim),
             mlm_target.view(-1))
+        mlm_acc = self.accuracy(
+            prediction_scores.view(-1, self.idim),
+            mlm_target.view(-1))
         if self.use_lid_loss:
-            lid_loss = self._calc_lid_loss(hs_mlm, lids)
-            mlm_loss += lid_loss
-        return mlm_loss
+            lid_loss_mlm = self._calc_lid_loss(hs_mlm, lids)
+        else:
+            lid_loss_mlm = torch.tensor(0.).to(xs.device)
+        return mlm_loss, mlm_acc, lid_loss_mlm
 
     def _calc_lid_loss(self, hs, lids):
-        print(f"hs: {hs.shape}")
         predicted = self.lid_net(hs)
-        print(f"predicted: {predicted.shape}")
         if self.lid_loss_level == "utterance":
             if len(lids.shape) == 2:
                 target = lids.squeeze(1)
@@ -764,10 +780,8 @@ class Transformer(AbsTTS):
             predicted = predicted.transpose(1, 2) # (batch, n_langs, seq_len)
             if len(lids.shape) == 2:
                 target = lids.repeat(1, predicted.size(2))
-                print(f"target: {target.shape}")
             else:
                 target = lids.unsqueeze(1).repeat(1, predicted.size(2))
-                print(f"target: {target.shape}")
             lid_loss = self.lid_criterion(predicted, target)
         return lid_loss
 
@@ -789,11 +803,6 @@ class Transformer(AbsTTS):
             hs, h_masks = self._multiple_encoding(xs, x_masks, lids)
         else:
             hs, h_masks = self.encoder(xs, x_masks)
-        
-        if self.use_lid_loss:
-            lid_loss = self._calc_lid_loss(hs, lids)
-        else:
-            lid_loss = torch.tensor(0.).to(xs.device)
 
         # integrate with GST
         if self.use_gst:
@@ -815,6 +824,13 @@ class Transformer(AbsTTS):
         
         if self.lang_embed_dim is not None:
             hs = self._integrate_with_lang_embed(hs, lembs)
+
+        # Calculating lid loss inside _forward() if not using mlm loss
+        # If using mlm loss, lid loss is calculated in _mlm_forward()
+        if self.use_lid_loss and not self.use_mlm_loss:
+            lid_loss = self._calc_lid_loss(hs, lids)
+        else:
+            lid_loss = torch.tensor(0.).to(xs.device)
 
         # thin out frames for reduction factor
         # (B, T_feats, odim) ->  (B, T_feats//r, odim)

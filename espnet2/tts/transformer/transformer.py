@@ -122,11 +122,13 @@ class Transformer(AbsTTS):
         guided_attn_loss_sigma: float = 0.4,
         guided_attn_loss_lambda: float = 1.0,
         use_mlm_loss: bool = False,
+        mlm_loss_lambda: float = 1.0,
         lang_family_encoding: bool = False,
         num_lang_family: int = -1,
         holdout_lids: str = None,
         use_lid_loss: bool = False,
         lid_loss_level: str = "utterance",
+        lid_loss_lambda: float = 1.0
     ):
         """Initialize Transformer module.
 
@@ -237,6 +239,7 @@ class Transformer(AbsTTS):
         self.use_guided_attn_loss = use_guided_attn_loss
         self.use_scaled_pos_enc = use_scaled_pos_enc
         self.use_mlm_loss = use_mlm_loss
+        self.mlm_loss_lambda = mlm_loss_lambda
         self.loss_type = loss_type
         self.use_guided_attn_loss = use_guided_attn_loss
         if self.use_guided_attn_loss:
@@ -251,6 +254,7 @@ class Transformer(AbsTTS):
             self.modules_applied_guided_attn = modules_applied_guided_attn
         self.use_lid_loss = use_lid_loss
         self.lid_loss_level = lid_loss_level
+        self.lid_loss_lambda = lid_loss_lambda
 
         # use idx 0 as padding idx
         self.padding_idx = 0
@@ -555,6 +559,8 @@ class Transformer(AbsTTS):
         if self.use_mlm_loss:
             batch_size_org = batch_size
             mlm_loss, mlm_acc, lid_loss_mlm = self._mlm_forward(xs=xs, ilens=ilens, lids=lids)
+            mlm_loss *= self.mlm_loss_lambda
+            lid_loss_mlm *= self.lid_loss_lambda
             (
                 xs, ilens, ys, olens, spembs, sids,
                 lembs, lids, labels, batch_size, is_empty
@@ -829,6 +835,7 @@ class Transformer(AbsTTS):
         # If using mlm loss, lid loss is calculated in _mlm_forward()
         if self.use_lid_loss and not self.use_mlm_loss:
             lid_loss = self._calc_lid_loss(hs, lids)
+            lid_loss *= self.lid_loss_lambda
         else:
             lid_loss = torch.tensor(0.).to(xs.device)
 

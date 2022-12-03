@@ -83,7 +83,7 @@ class DataProcessor:
         self.mos_filtering = mos_filtering
         self.byte_len_filtering = byte_len_filtering
         self.mos_thresh = 2.0
-        self.byte_len_thresh = 200
+        self.byte_len_thresh = 250
         self.seed = 0
 
         if lang_set is not None:
@@ -137,8 +137,8 @@ class DataProcessor:
         elif self.data_type == "fleurs":
             self.langtable = None
             self.data_name = "fleurs"
-            self.n_dev = 10
-            self.n_test = 10
+            self.n_dev = 5
+            self.n_test = 25
         
         self.mos_filtered_utt = None
         if self.mos_filtering:
@@ -300,6 +300,7 @@ def main():
     parser.add_argument("--byte_len_filtering", action="store_true")
     parser.add_argument("--lang_family", required=False, default=None, type=str)
     parser.add_argument("--lang_set", default=None, type=pathlib.Path)
+    parser.add_argument("--holdout_lang_set", default=None, type=pathlib.Path)
     args = parser.parse_args()
 
     data_types = []
@@ -321,6 +322,7 @@ def main():
             args.lang_family,
             args.byte_len_filtering).process()
         data_types.append("mailabs")
+
     if args.use_fleurs:
         print("Processing FLEURS ...")
         tsv_path = args.db_dir / f"fleurs{suffix}.tsv"
@@ -333,6 +335,19 @@ def main():
             args.lang_family,
             args.byte_len_filtering).process()
         data_types.append("fleurs")
+    elif args.holdout_lang_set is not None:
+        print("Using only FLEURS holdout langs ...")
+        tsv_path = args.db_dir / f"fleurs{suffix}.tsv"
+        DataProcessor(
+            "fleurs",
+            tsv_path,
+            args.token_type,
+            args.mos_filtering,
+            args.holdout_lang_set,
+            args.lang_family,
+            args.byte_len_filtering).process()
+        data_types.append("fleurs")
+
     if args.use_css10:
         print("Processing CSS10 ...")
         tsv_path = args.db_dir / f"css10{suffix}.tsv"

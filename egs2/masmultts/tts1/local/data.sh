@@ -25,6 +25,7 @@ use_mailabs=false
 mos_filtering=true
 byte_len_filtering=true
 lang_set=null
+holdout_lang_set=null
 lang_family=null
 
 log "$0 $*"
@@ -48,6 +49,9 @@ if [ ${byte_len_filtering} = true ]; then
 fi
 if [ ${lang_set} != null ]; then
     opts_data+=" --lang_set ${lang_set}"
+fi
+if [ ${holdout_lang_set} != null ]; then
+    opts_data+=" --holdout_lang_set ${holdout_lang_set}"
 fi
 if [ ${lang_family} != null ]; then
     opts_data+=" --lang_family ${lang_family}"

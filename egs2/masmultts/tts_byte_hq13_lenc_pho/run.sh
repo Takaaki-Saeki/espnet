@@ -19,6 +19,7 @@ use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
 lang_set="lang_set.txt"
+holdout_lang_set=null
 do_trimming=false
 lang_family=phonology
 #########################################################
@@ -31,6 +32,7 @@ local_data_opts+=" --use_fleurs ${use_fleurs}"
 local_data_opts+=" --mos_filtering ${mos_filtering}"
 local_data_opts+=" --byte_len_filtering ${byte_len_filtering}"
 local_data_opts+=" --lang_set ${lang_set}"
+local_data_opts+=" --holdout_lang_set ${holdout_lang_set}"
 local_data_opts+=" --lang_family ${lang_family}"
 local_data_opts+=" --do_trimming ${do_trimming}"
 

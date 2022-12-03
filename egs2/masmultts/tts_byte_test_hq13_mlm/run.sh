@@ -13,12 +13,13 @@ n_shift=256
 token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
-use_fleurs=true
+use_fleurs=false
 use_lid=true
 use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
 lang_set="lang_set.txt"
+holdout_lang_set="holdout_lang_set.txt"
 do_trimming=false
 lang_family=null
 #########################################################
@@ -31,6 +32,7 @@ local_data_opts+=" --use_fleurs ${use_fleurs}"
 local_data_opts+=" --mos_filtering ${mos_filtering}"
 local_data_opts+=" --byte_len_filtering ${byte_len_filtering}"
 local_data_opts+=" --lang_set ${lang_set}"
+local_data_opts+=" --holdout_lang_set ${holdout_lang_set}"
 local_data_opts+=" --lang_family ${lang_family}"
 local_data_opts+=" --do_trimming ${do_trimming}"
 

@@ -21,7 +21,7 @@ byte_len_filtering=true
 lang_set="lang_set.txt"
 holdout_lang_set=null
 do_trimming=false
-lang_family=fam
+lang_family=phonology
 #########################################################
 
 local_data_opts=""

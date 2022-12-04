@@ -20,5 +20,8 @@ ln -s "../tts1/tts.sh" "tts.sh"
 
 cp -r "../tts1/conf" .
 cp -r "../tts1/run.sh" .
+cp -r "../tts1/decode.sh" .
+cp -r "../tts1/lang_set.txt" .
+cp -r "../tts1/holdout_lang_set.txt" .
 
 echo "Successfully finished!"

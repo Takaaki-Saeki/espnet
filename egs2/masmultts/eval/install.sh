@@ -1,1 +1,1 @@
-. ./path.sh && pip install git+https://github.com/openai/whisper.git && pip install jiwer
+. ./path.sh && pip3 install git+https://github.com/openai/whisper.git && pip3 install jiwer

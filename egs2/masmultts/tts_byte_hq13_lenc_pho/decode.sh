@@ -14,14 +14,14 @@ token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
 use_fleurs=false
-use_lid=false
+use_lid=true
 use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
 lang_set="lang_set.txt"
-holdout_lang_set=null
+holdout_lang_set="holdout_lang_set.txt"
 do_trimming=false
-lang_family=null
+lang_family=phonology
 #########################################################
 
 local_data_opts=""
@@ -66,7 +66,7 @@ fi
 train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
-train_set=train
+train_set=dev
 valid_set=dev
 test_sets=test
 

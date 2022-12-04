@@ -15,11 +15,11 @@ use_mailabs=true
 use_css10=true
 use_fleurs=false
 use_lid=false
-use_lvector=false
+use_lvector=true
 mos_filtering=false
 byte_len_filtering=true
 lang_set="lang_set.txt"
-holdout_lang_set=null
+holdout_lang_set="holdout_lang_set.txt"
 do_trimming=false
 lang_family=null
 #########################################################
@@ -66,7 +66,7 @@ fi
 train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
-train_set=train
+train_set=dev
 valid_set=dev
 test_sets=test
 
@@ -81,7 +81,7 @@ test_sets=test
     --use_xvector true \
     --xvector_tool rawnet \
     --use_lvector ${use_lvector} \
-    --lvector_feats_type fam \
+    --lvector_feats_type phonology_knn \
     --token_type "${model_token_type}" \
     --cleaner "${cleaner}" \
     --g2p "${g2p}" \

@@ -19,7 +19,7 @@ use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
 lang_set="lang_set.txt"
-holdout_lang_set=null
+holdout_lang_set="holdout_lang_set.txt"
 do_trimming=false
 lang_family=null
 #########################################################
@@ -66,7 +66,7 @@ fi
 train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
-train_set=train
+train_set=dev
 valid_set=dev
 test_sets=test
 
@@ -79,7 +79,7 @@ test_sets=test
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --use_xvector true \
-    --xvector_tool rawnet \
+    --xvector_tool speechbrain \
     --use_lvector ${use_lvector} \
     --lvector_feats_type fam \
     --token_type "${model_token_type}" \

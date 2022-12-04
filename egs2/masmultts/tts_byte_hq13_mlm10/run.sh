@@ -63,7 +63,7 @@ else
     exit 1
 fi
 
-train_config=conf/train.yaml
+train_config=conf/train_override.yaml
 inference_config=conf/decode.yaml
 
 train_set=train

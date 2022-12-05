@@ -1,5 +1,5 @@
 #############################
-name="tts_byte_hq13"
+name="tts_byte_hq13_lemb_pho"
 #############################
 
 datadir="data"

@@ -1,5 +1,5 @@
 #######################
-dir_name="tts_pre_byte_m_en"
+dir_name="tts_byte_hq13"
 train_name="tts_train_raw_byte"
 #######################
 
@@ -10,7 +10,6 @@ if [ ! -e ${base}/${dir_name} ]; then
     echo "No such directory: ${base}/${dir_name}"
     exit 1
 fi
-
 
 if [ ! -e ${base}/${dir_name}/data ]; then
     echo "Make data dir first."

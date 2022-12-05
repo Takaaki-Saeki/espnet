@@ -293,8 +293,13 @@ class Transformer(AbsTTS):
             if spks is not None and spks > 1:
                 self.spks = spks
                 self.sid_emb = torch.nn.Embedding(spks, adim)
+            
             self.langs = None
-            if langs is not None and langs > 1:
+            if use_mlm_loss:
+                self.langs = None
+            elif use_lid_loss:
+                self.langs = None
+            elif langs is not None and langs > 1:
                 self.langs = langs
                 self.lid_emb = torch.nn.Embedding(langs, adim)
 

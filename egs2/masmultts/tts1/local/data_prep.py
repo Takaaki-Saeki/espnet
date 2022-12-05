@@ -138,7 +138,7 @@ class DataProcessor:
             self.langtable = None
             self.data_name = "fleurs"
             self.n_dev = 5
-            self.n_test = 25
+            self.n_test = 50
         
         self.mos_filtered_utt = None
         if self.mos_filtering:

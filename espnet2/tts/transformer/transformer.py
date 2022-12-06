@@ -1250,7 +1250,7 @@ class Transformer(AbsTTS):
         xs_masked = xs_masked * src_mask
 
         # mlm target (ignoring unmasked elements)
-        mlm_target = xs_masked.clone().masked_fill_(
+        mlm_target = xs.clone().masked_fill_(
             ~mask_pos, self.ignore_idx
         )
         return xs_masked, mlm_target

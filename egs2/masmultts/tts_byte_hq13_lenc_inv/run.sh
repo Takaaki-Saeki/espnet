@@ -22,6 +22,9 @@ lang_set="lang_set.txt"
 holdout_lang_set=null
 do_trimming=false
 lang_family=inventory
+spk_set=null
+n_train_utt=null
+override_spk_set=null
 #########################################################
 
 local_data_opts=""
@@ -35,6 +38,9 @@ local_data_opts+=" --lang_set ${lang_set}"
 local_data_opts+=" --holdout_lang_set ${holdout_lang_set}"
 local_data_opts+=" --lang_family ${lang_family}"
 local_data_opts+=" --do_trimming ${do_trimming}"
+local_data_opts+=" --spk_set ${spk_set}"
+local_data_opts+=" --n_train_utt ${n_train_utt}"
+local_data_opts+=" --override_spk_set ${override_spk_set}"
 
 opts=
 if [ "${fs}" -eq 22050 ]; then

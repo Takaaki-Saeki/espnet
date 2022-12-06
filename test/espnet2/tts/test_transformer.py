@@ -5,6 +5,7 @@ from espnet2.tts.transformer import Transformer
 
 
 @pytest.mark.parametrize("eprenet_conv_layers", [0, 1])
+@pytest.mark.parametrize("use_adapter", [False, True])
 @pytest.mark.parametrize("dprenet_layers", [0, 1])
 @pytest.mark.parametrize("postnet_layers", [0, 1])
 @pytest.mark.parametrize("reduction_factor", [1, 3])
@@ -31,6 +32,7 @@ from espnet2.tts.transformer import Transformer
 )
 def test_tranformer(
     eprenet_conv_layers,
+    use_adapter,
     dprenet_layers,
     postnet_layers,
     reduction_factor,
@@ -96,6 +98,7 @@ def test_tranformer(
         num_lang_family=num_lang_family,
         use_lid_loss=use_lid_loss,
         lid_loss_level=lid_loss_level,
+        use_adapter=use_adapter
     )
 
     inputs = dict(

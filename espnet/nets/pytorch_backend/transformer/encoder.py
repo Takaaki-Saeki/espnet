@@ -111,6 +111,7 @@ class Encoder(torch.nn.Module):
         intermediate_layers=None,
         ctc_softmax=None,
         conditioning_layer_dim=None,
+        adapter=None,
     ):
         """Construct an Encoder object."""
         super(Encoder, self).__init__()
@@ -246,6 +247,10 @@ class Encoder(torch.nn.Module):
             ]
         else:
             raise NotImplementedError(selfattention_layer_type)
+        
+        self.adapter = adapter
+        if self.adapter is not None:
+            logging.info("Loading adapter")
 
         self.encoders = repeat(
             num_blocks,
@@ -321,6 +326,9 @@ class Encoder(torch.nn.Module):
             xs, masks = self.embed(xs, masks)
         else:
             xs = self.embed(xs)
+        
+        if self.adapter is not None:
+            xs = self.adapter(xs)
 
         if self.intermediate_layers is None:
             xs, masks = self.encoders(xs, masks)
@@ -368,6 +376,8 @@ class Encoder(torch.nn.Module):
             xs, masks = self.embed(xs, masks)
         else:
             xs = self.embed(xs)
+        if self.adapter is not None:
+            xs = self.adapter(xs)
         if cache is None:
             cache = [None for _ in range(len(self.encoders))]
         new_cache = []

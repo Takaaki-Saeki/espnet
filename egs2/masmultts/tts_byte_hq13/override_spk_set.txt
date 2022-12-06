@@ -1,0 +1,6 @@
+ca_es judy
+pt_br judy
+bg_bg judy
+sk_sk judy
+tr_tr judy
+af_za judy

@@ -27,6 +27,9 @@ byte_len_filtering=true
 lang_set=null
 holdout_lang_set=null
 lang_family=null
+spk_set=null
+n_train_utt=null
+override_spk_set=null
 
 log "$0 $*"
 . utils/parse_options.sh
@@ -55,6 +58,15 @@ if [ ${holdout_lang_set} != null ]; then
 fi
 if [ ${lang_family} != null ]; then
     opts_data+=" --lang_family ${lang_family}"
+fi
+if [ ${spk_set} != null ]; then
+    opts_data+=" --spk_set ${spk_set}"
+fi
+if [ ${n_train_utt} != null ]; then
+    opts_data+=" --n_train_utt ${n_train_utt}"
+fi
+if [ ${override_spk_set} != null ]; then
+    opts_data+=" --override_spk_set ${override_spk_set}"
 fi
 
 

@@ -128,7 +128,8 @@ class Transformer(AbsTTS):
         holdout_lids: str = None,
         use_lid_loss: bool = False,
         lid_loss_level: str = "utterance",
-        lid_loss_lambda: float = 1.0
+        lid_loss_lambda: float = 1.0,
+        use_adapter: bool = False,
     ):
         """Initialize Transformer module.
 
@@ -255,6 +256,7 @@ class Transformer(AbsTTS):
         self.use_lid_loss = use_lid_loss
         self.lid_loss_level = lid_loss_level
         self.lid_loss_lambda = lid_loss_lambda
+        self.use_adapter = use_adapter
 
         # use idx 0 as padding idx
         self.padding_idx = 0
@@ -287,6 +289,9 @@ class Transformer(AbsTTS):
                 encoder_input_layer = torch.nn.Embedding(
                     num_embeddings=idim, embedding_dim=adim, padding_idx=self.padding_idx
                 )
+            adapter = None
+            if use_adapter:
+                adapter = LanguageAdapter(input_dim=adim, hidden_dim=256)
 
             # define spk and lang embedding
             self.spks = None
@@ -318,7 +323,8 @@ class Transformer(AbsTTS):
                 normalize_before=encoder_normalize_before,
                 concat_after=encoder_concat_after,
                 positionwise_layer_type=positionwise_layer_type,
-                positionwise_conv_kernel_size=positionwise_conv_kernel_size)
+                positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+                adapter=adapter)
         else:
             # Using separate encoder for language family
             self.lang_family_encoding = lang_family_encoding
@@ -359,7 +365,8 @@ class Transformer(AbsTTS):
                     normalize_before=encoder_normalize_before,
                     concat_after=encoder_concat_after,
                     positionwise_layer_type=positionwise_layer_type,
-                    positionwise_conv_kernel_size=positionwise_conv_kernel_size))
+                    positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+                    adapter=adapter))
             self.encoder = torch.nn.ModuleList(encoder_list)
 
             # Define spk embedding and not use language embedding
@@ -1338,6 +1345,22 @@ class EncoderWithLid(Encoder):
             xs = self.after_norm(xs)
         return xs, masks, new_cache
 
+class LanguageAdapter(torch.nn.Module):
+    def __init__(self, input_dim, hidden_dim):
+        super().__init__()
+        self.layer_norm = torch.nn.LayerNorm(input_dim, eps=1e-12)
+        # Down projection
+        self.in_linear = torch.nn.Linear(input_dim, hidden_dim)
+        # Up projection
+        self.out_linear = torch.nn.Linear(hidden_dim, input_dim)
+        self.relu = torch.nn.ReLU()
+    
+    def forward(self, x):
+        origin = x
+        x = self.in_linear(self.layer_norm(x))
+        x = self.out_linear(self.relu(x))
+        return x + origin
+    
 
 class BertPredictionHeadTransform(torch.nn.Module):
     def __init__(self, hidden_size):

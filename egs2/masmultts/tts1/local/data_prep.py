@@ -75,7 +75,19 @@ def langtable_css10():
     }
 
 class DataProcessor:
-    def __init__(self, data_type, tsv_path, token_type, mos_filtering=False, lang_set=None, lang_family=None, byte_len_filtering=False):
+    def __init__(
+        self,
+        data_type,
+        tsv_path,
+        token_type,
+        mos_filtering=False,
+        lang_set=None,
+        lang_family=None,
+        byte_len_filtering=False,
+        spk_set=None,
+        n_train_utt=None,
+        override_spk_set=None
+    ):
         self.dst_dir = pathlib.Path("data")
         self.data_type = data_type
         self.tsv_path = tsv_path
@@ -91,6 +103,23 @@ class DataProcessor:
                 self.lang_set = [line.strip() for line in fr]
         else:
             self.lang_set = None
+        
+        if spk_set is not None:
+            with open(spk_set, "r") as fr:
+                self.spk_set = [line.strip() for line in fr]
+        else:
+            self.spk_set = None
+
+        if override_spk_set is not None:
+            self.override_spk_set = {}
+            with open(override_spk_set, "r") as fr:
+                for line in fr:
+                    lang, spk = line.strip().split()
+                    self.override_spk_set[lang] = spk
+        else:
+            self.override_spk_set = None
+        
+        self.n_train_utt = n_train_utt
 
         self.lang2group = {}
         if lang_family == "syntax":
@@ -121,7 +150,6 @@ class DataProcessor:
             self.lang2group = None
         else:
             raise ValueError("Invalid lang_family")
-            
 
         if self.data_type == "mailabs":
             self.langtable = langtable_mailabs()
@@ -223,6 +251,13 @@ class DataProcessor:
                         continue
                 if self.lang2group is not None:
                     lang = self.lang2group[lang]
+                if self.spk_set is not None:
+                    if spk not in self.spk_set:
+                        continue
+                if self.override_spk_set is not None:
+                    if lang in self.override_spk_set:
+                        spk = self.override_spk_set[lang]
+                        uttid = f"{spk}_{uttid}"
                 lang2utt[lang].append(uttid)
                 utt2spk[uttid] = spk
                 utt2lang[uttid] = lang
@@ -235,6 +270,8 @@ class DataProcessor:
             np.random.seed(self.seed)
             rand_idx = np.random.permutation(len(lang2utt[lang]))
             train_idx = rand_idx[self.n_dev+self.n_test :]
+            if self.n_train_utt is not None:
+                train_idx = train_idx[: self.n_train_utt]
             uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
             dev_idx = rand_idx[: self.n_dev]
             uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
@@ -301,6 +338,9 @@ def main():
     parser.add_argument("--lang_family", required=False, default=None, type=str)
     parser.add_argument("--lang_set", default=None, type=pathlib.Path)
     parser.add_argument("--holdout_lang_set", default=None, type=pathlib.Path)
+    parser.add_argument("--spk_set", required=False, default=None, type=pathlib.Path)
+    parser.add_argument("--override_spk_set", required=False, default=None, type=pathlib.Path)
+    parser.add_argument("--n_train_utt", required=False, default=None, type=int)
     args = parser.parse_args()
 
     data_types = []
@@ -320,7 +360,10 @@ def main():
             args.mos_filtering,
             args.lang_set,
             args.lang_family,
-            args.byte_len_filtering).process()
+            args.byte_len_filtering,
+            args.spk_set,
+            args.n_train_utt,
+            args.override_spk_set).process()
         data_types.append("mailabs")
 
     if args.use_fleurs:
@@ -333,7 +376,10 @@ def main():
             args.mos_filtering,
             args.lang_set,
             args.lang_family,
-            args.byte_len_filtering).process()
+            args.byte_len_filtering,
+            args.spk_set,
+            args.n_train_utt,
+            args.override_spk_set).process()
         data_types.append("fleurs")
     elif args.holdout_lang_set is not None:
         print("Using only FLEURS holdout langs ...")
@@ -345,7 +391,10 @@ def main():
             args.mos_filtering,
             args.holdout_lang_set,
             args.lang_family,
-            args.byte_len_filtering).process()
+            args.byte_len_filtering,
+            args.spk_set,
+            args.n_train_utt,
+            args.override_spk_set).process()
         data_types.append("fleurs")
 
     if args.use_css10:
@@ -358,7 +407,10 @@ def main():
             args.mos_filtering,
             args.lang_set,
             args.lang_family,
-            args.byte_len_filtering).process()
+            args.byte_len_filtering,
+            args.spk_set,
+            args.n_train_utt,
+            args.override_spk_set).process()
         data_types.append("css10")
     
     assert len(data_types) > 0, "No data type is specified."

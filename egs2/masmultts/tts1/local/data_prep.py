@@ -156,17 +156,21 @@ class DataProcessor:
             self.data_name = "m_ailabs"
             self.n_dev = 25
             self.n_test = 25
+            self.spks_30min = None
         elif self.data_type == "css10":
             self.langtable = langtable_css10()
             self.data_name = "css10"
             self.n_dev = 25
             self.n_test = 25
             self.mos_filtering = False
+            self.spks_30min = None
         elif self.data_type == "fleurs":
             self.langtable = None
             self.data_name = "fleurs"
             self.n_dev = 5
             self.n_test = 50
+            with open("local/fleurs_30min_spks.csv", "r") as fr:
+                self.spks_30min = set([line.strip() for line in fr])
         
         self.mos_filtered_utt = None
         if self.mos_filtering:
@@ -209,6 +213,12 @@ class DataProcessor:
             uttid for uttid in utt_list if uttid in self.byte_len_filtered_utt]
         return out_utt_list
 
+    def get_30min_spk_filtered_uttids(self, utt_list):
+        print(f"Filtering fleurs speakers less than 30 mins")
+        out_utt_list = [
+            uttid for uttid in utt_list if uttid in self.spk30min_filtered_utt]
+        return out_utt_list
+
     def remove_non_printable_chars(self, in_string):
         return ''.join(c for c in in_string if c.isprintable())
 
@@ -221,6 +231,10 @@ class DataProcessor:
         utt2lang = {}
         utt2wav = {}
         utt2text = {}
+
+        self.spk30min_filtered_utt = None
+        if self.spks_30min is not None:
+            self.spk30min_filtered_utt = set()
 
         with open(self.tsv_path, "r") as fr:
             for line in fr:
@@ -258,6 +272,9 @@ class DataProcessor:
                     if lang in self.override_spk_set:
                         spk = self.override_spk_set[lang]
                         uttid = f"{spk}_{uttid}"
+                if self.spks_30min is not None:
+                    if spk in self.spks_30min:
+                        self.spk30min_filtered_utt.add(uttid)
                 lang2utt[lang].append(uttid)
                 utt2spk[uttid] = spk
                 utt2lang[uttid] = lang
@@ -284,6 +301,8 @@ class DataProcessor:
                 utt_list = self.get_mos_filtered_uttids(utt_list)
             if setname == "train" and self.byte_len_filtering:
                 utt_list = self.get_byte_len_filtered_uttids(utt_list)
+            if setname == "train" and self.spks_30min is not None:
+                utt_list = self.get_30min_spk_filtered_uttids(utt_list)
 
             utt2lang_list = []
             wavscp_list = []

@@ -10,15 +10,21 @@ n_fft=1024
 n_shift=256
 
 ################# Configs to be set #####################
-token_type=byte
+token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
 use_fleurs=true
 use_lid=false
-mos_filtering=true
-lang_set="lang_set_decode.txt"
+use_lvector=false
+mos_filtering=false
+byte_len_filtering=true
+lang_set="lang_set.txt"
+holdout_lang_set=null
 do_trimming=false
-lang_family=false
+lang_family=null
+spk_set=null
+n_train_utt=null
+override_spk_set=null
 #########################################################
 
 local_data_opts=""
@@ -27,9 +33,14 @@ local_data_opts+=" --use_mailabs ${use_mailabs}"
 local_data_opts+=" --use_css10 ${use_css10}"
 local_data_opts+=" --use_fleurs ${use_fleurs}"
 local_data_opts+=" --mos_filtering ${mos_filtering}"
+local_data_opts+=" --byte_len_filtering ${byte_len_filtering}"
 local_data_opts+=" --lang_set ${lang_set}"
+local_data_opts+=" --holdout_lang_set ${holdout_lang_set}"
 local_data_opts+=" --lang_family ${lang_family}"
 local_data_opts+=" --do_trimming ${do_trimming}"
+local_data_opts+=" --spk_set ${spk_set}"
+local_data_opts+=" --n_train_utt ${n_train_utt}"
+local_data_opts+=" --override_spk_set ${override_spk_set}"
 
 opts=
 if [ "${fs}" -eq 22050 ]; then

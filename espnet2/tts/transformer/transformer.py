@@ -130,6 +130,7 @@ class Transformer(AbsTTS):
         lid_loss_level: str = "utterance",
         lid_loss_lambda: float = 1.0,
         use_adapter: bool = False,
+        use_encoder_w_lid: bool = False
     ):
         """Initialize Transformer module.
 
@@ -304,12 +305,21 @@ class Transformer(AbsTTS):
                 self.langs = None
             elif use_lid_loss:
                 self.langs = None
+            elif use_encoder_w_lid:
+                self.langs = None
+                self.lid_emb = torch.nn.Embedding(langs, adim)
             elif langs is not None and langs > 1:
                 self.langs = langs
                 self.lid_emb = torch.nn.Embedding(langs, adim)
+            
+            self.use_encoder_w_lid = use_encoder_w_lid
+            if use_encoder_w_lid:
+                encoder_cls = EncoderWithLid
+            else:
+                encoder_cls = Encoder
 
             # Not using EncoderLid.
-            self.encoder = Encoder(
+            self.encoder = encoder_cls(
                 idim=idim,
                 attention_dim=adim,
                 attention_heads=aheads,
@@ -330,6 +340,7 @@ class Transformer(AbsTTS):
             self.lang_family_encoding = lang_family_encoding
             self.num_lang_family = num_lang_family
             encoder_list = []
+            assert use_encoder_w_lid == False, "EncoderWithLid is not supported for lang-family encoding."
             for _ in range(num_lang_family):
                 if eprenet_conv_layers != 0:
                     # encoder prenet
@@ -366,7 +377,7 @@ class Transformer(AbsTTS):
                     concat_after=encoder_concat_after,
                     positionwise_layer_type=positionwise_layer_type,
                     positionwise_conv_kernel_size=positionwise_conv_kernel_size,
-                    adapter=adapter))
+                    adapter=None))
             self.encoder = torch.nn.ModuleList(encoder_list)
 
             # Define spk embedding and not use language embedding
@@ -416,6 +427,7 @@ class Transformer(AbsTTS):
         if self.use_mlm_loss:
             assert langs is not None, "langs must be specified when use_mlm_loss is True."
             assert lang_family_encoding is False, "Not supporting lang_family_encoding when use_mlm_loss is True."
+            assert use_encoder_w_lid is False, "EncoderWithLid is not supported for lang-family encoding."
             self.mlm_head = BertLMPredictionHead(
                 hidden_size=adim,
                 vocab_size=idim)
@@ -819,6 +831,9 @@ class Transformer(AbsTTS):
 
         if self.lang_family_encoding:
             hs, h_masks = self._multiple_encoding(xs, x_masks, lids)
+        elif self.use_encoder_w_lid:
+            lid_embs = self.lid_emb(lids.view(-1))
+            hs, h_masks = self.encoder(xs, x_masks, lid_embs)
         else:
             hs, h_masks = self.encoder(xs, x_masks)
 
@@ -1019,6 +1034,9 @@ class Transformer(AbsTTS):
         xs = x.unsqueeze(0)
         if self.lang_family_encoding:
             hs, _ = self._multiple_encoding(xs, None, lids)
+        elif self.use_encoder_w_lid:
+            lid_embs = self.lid_emb(lids.view(-1))
+            hs, _ = self.encoder(xs, None, lid_embs)
         else:
             hs, _ = self.encoder(xs, None)
 
@@ -1344,6 +1362,7 @@ class EncoderWithLid(Encoder):
         if self.normalize_before:
             xs = self.after_norm(xs)
         return xs, masks, new_cache
+
 
 class LanguageAdapter(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim):

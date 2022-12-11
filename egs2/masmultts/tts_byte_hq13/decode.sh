@@ -24,7 +24,7 @@ do_trimming=false
 lang_family=null
 spk_set=null
 n_train_utt=null
-override_spk_set="override_spk_set.txt"
+override_spk_set=null
 #########################################################
 
 local_data_opts=""

@@ -14,13 +14,14 @@ from espnet2.tts.transformer import Transformer
     [(None, "add", None, "add"), (2, "add", 2, "add"), (2, "concat", 2, "concat")],
 )
 @pytest.mark.parametrize(
-    "spks, langs, use_gst, lang_family_encoding, num_lang_family, use_mlm_loss, holdout_lids, use_lid_loss, lid_loss_level",
+    "spks, langs, use_gst, lang_family_encoding, num_lang_family, use_mlm_loss, holdout_lids, use_lid_loss, lid_loss_level, use_encoder_w_lid",
     [
-        (-1, -1, False, False, -1, False, None, False, "utterance"),
-        (10, 7, True, False, -1, True, "3 4", True, "utterance"),
-        (10, 7, True, False, -1, True, "3 4", True, "token"),
-        (10, 7, True, True, 7, False, None, False, "utterance"),
-        (10, 7, True, True, 7, False, None, False, "utterance"),
+        (-1, -1, False, False, -1, False, None, False, "utterance", False),
+        (10, 7, True, False, -1, False, None, False, "utterance", True),
+        (10, 7, True, False, -1, True, "3 4", True, "utterance", False),
+        (10, 7, True, False, -1, True, "3 4", True, "token", False),
+        (10, 7, True, True, 7, False, None, False, "utterance", False),
+        (10, 7, True, True, 7, False, None, False, "utterance", False),
     ],
 )
 @pytest.mark.parametrize(
@@ -49,6 +50,7 @@ def test_tranformer(
     holdout_lids,
     use_lid_loss,
     lid_loss_level,
+    use_encoder_w_lid,
     use_guided_attn_loss,
     modules_applied_guided_attn,
 ):
@@ -97,6 +99,7 @@ def test_tranformer(
         lang_family_encoding=lang_family_encoding,
         num_lang_family=num_lang_family,
         use_lid_loss=use_lid_loss,
+        use_encoder_w_lid=use_encoder_w_lid,
         lid_loss_level=lid_loss_level,
         use_adapter=use_adapter
     )

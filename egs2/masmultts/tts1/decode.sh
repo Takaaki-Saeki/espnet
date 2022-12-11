@@ -25,6 +25,8 @@ lang_family=null
 spk_set=null
 n_train_utt=null
 override_spk_set=null
+lang2lid_override=null
+token_list_override="local/token_list_${token_type}.txt"
 #########################################################
 
 local_data_opts=""
@@ -48,6 +50,13 @@ if [ "${fs}" -eq 22050 ]; then
     opts="--audio_format wav "
 else
     opts="--audio_format flac "
+fi
+
+if [ ${lang2lid_override} != null ]; then
+    opts+="--lang2lid_override ${lang2lid_override} "
+fi
+if [ ${token_list_override} != null ]; then
+    opts+="--token_list_override ${token_list_override} "
 fi
 
 lang=noinfo

@@ -9,7 +9,6 @@ from typing import Dict, Optional, Sequence, Tuple
 
 import torch
 import torch.nn.functional as F
-from torchmetrics import Accuracy
 from typeguard import check_argument_types
 
 from espnet2.torch_utils.device_funcs import force_gatherable
@@ -37,6 +36,11 @@ from espnet.nets.pytorch_backend.transformer.subsampling import (
     Conv2dSubsampling,
     Conv2dSubsampling6,
     Conv2dSubsampling8,
+)
+from espnet.nets.pytorch_backend.transformer.attention import MultiHeadedAttention
+from espnet.nets.pytorch_backend.transformer.encoder_layer import EncoderLayer
+from espnet.nets.pytorch_backend.transformer.positionwise_feed_forward import (
+    PositionwiseFeedForward,
 )
 
 
@@ -130,7 +134,8 @@ class Transformer(AbsTTS):
         lid_loss_level: str = "utterance",
         lid_loss_lambda: float = 1.0,
         use_adapter: bool = False,
-        use_encoder_w_lid: bool = False
+        adapter_type: str = "residual",
+        use_encoder_w_lid: bool = False,
     ):
         """Initialize Transformer module.
 
@@ -292,7 +297,15 @@ class Transformer(AbsTTS):
                 )
             adapter = None
             if use_adapter:
-                adapter = LanguageAdapter(input_dim=adim, hidden_dim=256)
+                adapter = None
+                if adapter_type == "residual":
+                    adapter = ResidualAdapter(input_dim=adim, hidden_dim=256)
+                elif adapter_type == "transformer":
+                    adapter = TransformerAdapter(input_dim=adim)
+                elif adapter_type == "identity":
+                    adapter = IdentityAdapter()
+                else:
+                    raise ValueError("adapter_type must be one of 'residual', 'transformer', 'identity")
 
             # define spk and lang embedding
             self.spks = None
@@ -316,7 +329,7 @@ class Transformer(AbsTTS):
             if use_encoder_w_lid:
                 encoder_cls = EncoderWithLid
             else:
-                encoder_cls = Encoder
+                encoder_cls = EncoderWithAdapter
 
             # Not using EncoderLid.
             self.encoder = encoder_cls(
@@ -431,16 +444,13 @@ class Transformer(AbsTTS):
             self.mlm_head = BertLMPredictionHead(
                 hidden_size=adim,
                 vocab_size=idim)
-            self.ignore_idx = -100
-            self.mlm_criterion = torch.nn.CrossEntropyLoss(ignore_index=self.ignore_idx)
+            self.mlm_criterion = torch.nn.CrossEntropyLoss(ignore_index=self.padding_idx)
             assert len(holdout_lids.strip().split()) > 0, "holdout_lids must be specified when use_mlm_loss is True."
             self.holdout_lids = torch.tensor(
                 [int(x) for x in holdout_lids.strip().split()]
             )
             self.accuracy = Accuracy(
-                task="multiclass",
-                num_classes=idim,
-                ignore_label=self.ignore_idx)
+                ignore_index=self.padding_idx)
         
         if self.use_lid_loss:
             assert langs is not None, "langs must be specified when use_lid_loss is True."
@@ -1281,6 +1291,96 @@ class Transformer(AbsTTS):
         return xs_masked, mlm_target
 
 
+class EncoderWithAdapter(Encoder):
+    def forward(self, xs, masks):
+        """Encode input sequence.
+
+        Args:
+            xs (torch.Tensor): Input tensor (#batch, time, idim).
+            masks (torch.Tensor): Mask tensor (#batch, time).
+
+        Returns:
+            torch.Tensor: Output tensor (#batch, time, attention_dim).
+            torch.Tensor: Mask tensor (#batch, time).
+
+        """
+        if isinstance(
+            self.embed,
+            (Conv2dSubsampling, Conv2dSubsampling6, Conv2dSubsampling8, VGG2L),
+        ):
+            xs, masks = self.embed(xs, masks)
+        else:
+            xs = self.embed(xs)
+        
+        if self.adapter is not None:
+            if isinstance(self.adapter, TransformerAdapter):
+                xs, masks = self.adapter(xs, masks)
+            else:
+                xs = self.adapter(xs)
+
+        if self.intermediate_layers is None:
+            xs, masks = self.encoders(xs, masks)
+        else:
+            intermediate_outputs = []
+            for layer_idx, encoder_layer in enumerate(self.encoders):
+                xs, masks = encoder_layer(xs, masks)
+
+                if (
+                    self.intermediate_layers is not None
+                    and layer_idx + 1 in self.intermediate_layers
+                ):
+                    encoder_output = xs
+                    # intermediate branches also require normalization.
+                    if self.normalize_before:
+                        encoder_output = self.after_norm(encoder_output)
+                    intermediate_outputs.append(encoder_output)
+
+                    if self.use_conditioning:
+                        intermediate_result = self.ctc_softmax(encoder_output)
+                        xs = xs + self.conditioning_layer(intermediate_result)
+
+        if self.normalize_before:
+            xs = self.after_norm(xs)
+
+        if self.intermediate_layers is not None:
+            return xs, masks, intermediate_outputs
+        return xs, masks
+
+    def forward_one_step(self, xs, masks, cache=None):
+        """Encode input frame.
+
+        Args:
+            xs (torch.Tensor): Input tensor.
+            masks (torch.Tensor): Mask tensor.
+            cache (List[torch.Tensor]): List of cache tensors.
+
+        Returns:
+            torch.Tensor: Output tensor.
+            torch.Tensor: Mask tensor.
+            List[torch.Tensor]: List of new cache tensors.
+
+        """
+        if isinstance(self.embed, Conv2dSubsampling):
+            xs, masks = self.embed(xs, masks)
+        else:
+            xs = self.embed(xs)
+        if self.adapter is not None:
+            if isinstance(self.adapter, TransformerAdapter):
+                xs, masks = self.adapter(xs, masks)
+            else:
+                xs = self.adapter(xs)
+
+        if cache is None:
+            cache = [None for _ in range(len(self.encoders))]
+        new_cache = []
+        for c, e in zip(cache, self.encoders):
+            xs, masks = e(xs, masks, cache=c)
+            new_cache.append(xs)
+        if self.normalize_before:
+            xs = self.after_norm(xs)
+        return xs, masks, new_cache
+
+
 class EncoderWithLid(Encoder):
     def forward(self, xs, masks, lang_emb=None):
         """Encode input sequence.
@@ -1303,6 +1403,13 @@ class EncoderWithLid(Encoder):
         # Adding language embedding
         if lang_emb is not None:
             xs = xs + lang_emb.unsqueeze(1)
+
+        # Adding adapter
+        if self.adapter is not None:
+            if isinstance(self.adapter, TransformerAdapter):
+                xs, masks = self.adapter(xs, masks)
+            else:
+                xs = self.adapter(xs)
 
         if self.intermediate_layers is None:
             xs, masks = self.encoders(xs, masks)
@@ -1353,6 +1460,13 @@ class EncoderWithLid(Encoder):
         if lang_emb:
             xs = xs + lang_emb.unsqueeze(1)
 
+        # Adding adapter
+        if self.adapter is not None:
+            if isinstance(self.adapter, TransformerAdapter):
+                xs, masks = self.adapter(xs, masks)
+            else:
+                xs = self.adapter(xs)
+
         if cache is None:
             cache = [None for _ in range(len(self.encoders))]
         new_cache = []
@@ -1364,7 +1478,7 @@ class EncoderWithLid(Encoder):
         return xs, masks, new_cache
 
 
-class LanguageAdapter(torch.nn.Module):
+class ResidualAdapter(torch.nn.Module):
     def __init__(self, input_dim, hidden_dim):
         super().__init__()
         self.layer_norm = torch.nn.LayerNorm(input_dim, eps=1e-12)
@@ -1379,6 +1493,35 @@ class LanguageAdapter(torch.nn.Module):
         x = self.in_linear(self.layer_norm(x))
         x = self.out_linear(self.relu(x))
         return x + origin
+
+
+class TransformerAdapter(torch.nn.Module):
+    def __init__(self, input_dim):
+        """
+        Adapter based on Transformer Encoder consisting of MultiHeadAttention.
+        """
+        super().__init__()
+        self.transformer_encoder = EncoderLayer(
+            input_dim,
+            MultiHeadedAttention(4, input_dim, 0.1),
+            PositionwiseFeedForward(
+                input_dim, 2048, 0.1),
+            dropout_rate=0.1,
+            normalize_before=True,
+            concat_after=False,
+            stochastic_depth_rate=0.0)
+    
+    def forward(self, x, mask):
+        # x: (batch, time, dim)
+        return self.transformer_encoder(x, mask)
+
+
+class IdentityAdapter(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = torch.nn.Identity()
+    def forward(self, x):
+        return self.net(x)
     
 
 class BertPredictionHeadTransform(torch.nn.Module):
@@ -1471,6 +1614,7 @@ class LidPredictor(torch.nn.Module):
             x = self.linear_out(x)
         return x
 
+
 class ConvBlockRes1D(torch.nn.Module):
     def __init__(self, in_channels, out_channels, size, momentum=0.01):
         super().__init__()
@@ -1514,3 +1658,25 @@ class ConvBlockRes1D(torch.nn.Module):
             return self.shortcut(origin) + x
         else:
             return origin + x
+
+
+class Accuracy:
+
+    def __init__(self, ignore_index: int = 0):
+        super().__init__()
+        self.ignore_index = ignore_index
+
+    def __call__(self, output: torch.Tensor, target: torch.Tensor):
+        output = output.view(-1, output.shape[-1])
+        target = target.view(-1)
+        pred = output.clone().argmax(dim=-1)
+        mask = target == self.ignore_index
+        pred.masked_fill_(mask, self.ignore_index)
+        n_masked = mask.sum()
+        n_correct = pred.eq(target).sum() - n_masked
+        n_samples = len(target) - n_masked
+        if n_samples == 0:
+            return torch.tensor(-1.0).to(output.device)
+        else:
+            return n_correct / n_samples
+

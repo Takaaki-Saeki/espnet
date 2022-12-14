@@ -18,7 +18,7 @@ use_lid=true
 use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
-lang_set="lang_set.txt"
+lang_set="lang_set_decode.txt"
 holdout_lang_set=null
 do_trimming=false
 lang_family=null
@@ -94,7 +94,7 @@ test_sets=test
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --use_xvector true \
-    --xvector_tool rawnet \
+    --xvector_tool speechbrain \
     --use_lvector ${use_lvector} \
     --lvector_feats_type fam \
     --token_type "${model_token_type}" \

@@ -1,5 +1,0 @@
-fr_fr
-de_de
-ru_ru
-es_419
-en_us

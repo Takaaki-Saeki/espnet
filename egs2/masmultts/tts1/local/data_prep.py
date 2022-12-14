@@ -154,21 +154,21 @@ class DataProcessor:
         if self.data_type == "mailabs":
             self.langtable = langtable_mailabs()
             self.data_name = "m_ailabs"
-            self.n_dev = 25
-            self.n_test = 25
+            self.n_dev = 10
+            self.n_test = 100
             self.spks_30min = None
         elif self.data_type == "css10":
             self.langtable = langtable_css10()
             self.data_name = "css10"
-            self.n_dev = 25
-            self.n_test = 25
+            self.n_dev = 10
+            self.n_test = 100
             self.mos_filtering = False
             self.spks_30min = None
         elif self.data_type == "fleurs":
             self.langtable = None
             self.data_name = "fleurs"
-            self.n_dev = 5
-            self.n_test = 50
+            self.n_dev = 10
+            self.n_test = 100
             with open("local/fleurs_30min_spks.csv", "r") as fr:
                 self.spks_30min = set([line.strip() for line in fr])
         

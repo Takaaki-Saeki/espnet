@@ -1,6 +1,0 @@
-ca_es
-pt_br
-bg_bg
-sk_sk
-tr_tr
-af_za

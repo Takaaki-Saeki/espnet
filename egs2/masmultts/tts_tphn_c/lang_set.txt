@@ -1,8 +1,0 @@
-nl_nl
-fi_fi
-fr_fr
-de_de
-el_gr
-hu_hu
-ru_ru
-es_419

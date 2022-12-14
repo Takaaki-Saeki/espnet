@@ -61,6 +61,7 @@ tts_conf:                  # keyword arguments for the selected model
     lang_family_encoding: False
     num_lang_family: 7
     use_adapter: True
+    adapter_type: "residual"                         # type of adapter
     use_encoder_w_lid: True
 
 ##########################################################

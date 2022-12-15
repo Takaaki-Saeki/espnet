@@ -68,7 +68,7 @@ elif [ ${token_type} = "tphn" ]; then
     model_token_type=char
     g2p=none
 elif [ ${token_type} = "phn" ]; then
-    model_token_type=char
+    model_token_type=word
     g2p=none
 elif [ ${token_type} = "bphn" ]; then
     model_token_type=word
@@ -94,7 +94,7 @@ test_sets=test
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --use_xvector true \
-    --xvector_tool rawnet \
+    --xvector_tool speechbrain \
     --use_lvector ${use_lvector} \
     --lvector_feats_type fam \
     --token_type "${model_token_type}" \

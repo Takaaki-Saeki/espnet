@@ -26,7 +26,7 @@ spk_set=null
 n_train_utt=null
 override_spk_set=null
 lang2lid_override=null
-token_list_override="local/token_list_${token_type}.txt"
+token_list_override=null
 #########################################################
 
 local_data_opts=""

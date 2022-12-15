@@ -68,7 +68,7 @@ elif [ ${token_type} = "tphn" ]; then
     model_token_type=char
     g2p=none
 elif [ ${token_type} = "phn" ]; then
-    model_token_type=char
+    model_token_type=word
     g2p=none
 elif [ ${token_type} = "bphn" ]; then
     model_token_type=word
@@ -88,7 +88,7 @@ test_sets=test
 ./tts.sh \
     --lang ${lang} \
     --local_data_opts "${local_data_opts}" \
-    --feats_type raw \
+    --feats_type speechbrain \
     --use_lid ${use_lid} \
     --fs "${fs}" \
     --n_fft "${n_fft}" \

@@ -8,7 +8,7 @@ This code is based on https://github.com/jaywalnut310/vits.
 """
 
 import math
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Any
 
 import numpy as np
 import torch
@@ -21,6 +21,11 @@ from espnet2.gan_tts.vits.posterior_encoder import PosteriorEncoder
 from espnet2.gan_tts.vits.residual_coupling import ResidualAffineCouplingBlock
 from espnet2.gan_tts.vits.text_encoder import TextEncoder
 from espnet.nets.pytorch_backend.nets_utils import make_non_pad_mask
+from espnet.nets.pytorch_backend.transformer.attention import MultiHeadedAttention
+from espnet.nets.pytorch_backend.transformer.encoder_layer import EncoderLayer
+from espnet.nets.pytorch_backend.transformer.positionwise_feed_forward import (
+    PositionwiseFeedForward,
+)
 
 
 class VITSGenerator(torch.nn.Module):
@@ -86,6 +91,9 @@ class VITSGenerator(torch.nn.Module):
         stochastic_duration_predictor_dropout_rate: float = 0.5,
         stochastic_duration_predictor_flows: int = 4,
         stochastic_duration_predictor_dds_conv_layers: int = 3,
+        use_adapter: Optional[bool] = False,
+        adapter_type: Optional[str] = "residual",
+        use_encoder_w_lid: Optional[bool] = False
     ):
         """Initialize VITS generator module.
 
@@ -165,29 +173,65 @@ class VITSGenerator(torch.nn.Module):
                 duration predictor.
             stochastic_duration_predictor_dds_conv_layers (int): Number of DDS conv
                 layers in stochastic duration predictor.
-
+            use_adapter: Whether to use adapter.
+            adapter_type: Type of adapter.
+            use_encoder_w_lid: Whether to use encoder with lid.
         """
         super().__init__()
         self.segment_size = segment_size
-        self.text_encoder = TextEncoder(
-            vocabs=vocabs,
-            attention_dim=hidden_channels,
-            attention_heads=text_encoder_attention_heads,
-            linear_units=hidden_channels * text_encoder_ffn_expand,
-            blocks=text_encoder_blocks,
-            positionwise_layer_type=text_encoder_positionwise_layer_type,
-            positionwise_conv_kernel_size=text_encoder_positionwise_conv_kernel_size,
-            positional_encoding_layer_type=text_encoder_positional_encoding_layer_type,
-            self_attention_layer_type=text_encoder_self_attention_layer_type,
-            activation_type=text_encoder_activation_type,
-            normalize_before=text_encoder_normalize_before,
-            dropout_rate=text_encoder_dropout_rate,
-            positional_dropout_rate=text_encoder_positional_dropout_rate,
-            attention_dropout_rate=text_encoder_attention_dropout_rate,
-            conformer_kernel_size=text_encoder_conformer_kernel_size,
-            use_macaron_style=use_macaron_style_in_text_encoder,
-            use_conformer_conv=use_conformer_conv_in_text_encoder,
-        )
+        self.use_encoder_w_lid = use_encoder_w_lid
+        if use_encoder_w_lid:
+            assert langs > 0, "langs must be > 0 when use_encoder_w_lid is True."
+            assert use_adapter is True, "use_adapter must be True when use_encoder_w_lid is True."
+            if adapter_type == "residual":
+                adapter = ResidualAdapter(input_dim=hidden_channels, hidden_dim=128)
+            elif adapter_type == "transformer":
+                adapter = TransformerAdapter(input_dim=hidden_channels)
+            elif adapter_type == "identity":
+                adapter = IdentityAdapter()
+            else:
+                raise ValueError("adapter_type must be one of 'residual', 'transformer', 'identity")
+            self.text_encoder = TextEncoderWithLid(
+                vocabs=vocabs,
+                attention_dim=hidden_channels,
+                attention_heads=text_encoder_attention_heads,
+                linear_units=hidden_channels * text_encoder_ffn_expand,
+                blocks=text_encoder_blocks,
+                positionwise_layer_type=text_encoder_positionwise_layer_type,
+                positionwise_conv_kernel_size=text_encoder_positionwise_conv_kernel_size,
+                positional_encoding_layer_type=text_encoder_positional_encoding_layer_type,
+                self_attention_layer_type=text_encoder_self_attention_layer_type,
+                activation_type=text_encoder_activation_type,
+                normalize_before=text_encoder_normalize_before,
+                dropout_rate=text_encoder_dropout_rate,
+                positional_dropout_rate=text_encoder_positional_dropout_rate,
+                attention_dropout_rate=text_encoder_attention_dropout_rate,
+                conformer_kernel_size=text_encoder_conformer_kernel_size,
+                use_macaron_style=use_macaron_style_in_text_encoder,
+                use_conformer_conv=use_conformer_conv_in_text_encoder,
+                langs=langs,
+                adapter=adapter,
+            )
+        else:
+            self.text_encoder = TextEncoder(
+                vocabs=vocabs,
+                attention_dim=hidden_channels,
+                attention_heads=text_encoder_attention_heads,
+                linear_units=hidden_channels * text_encoder_ffn_expand,
+                blocks=text_encoder_blocks,
+                positionwise_layer_type=text_encoder_positionwise_layer_type,
+                positionwise_conv_kernel_size=text_encoder_positionwise_conv_kernel_size,
+                positional_encoding_layer_type=text_encoder_positional_encoding_layer_type,
+                self_attention_layer_type=text_encoder_self_attention_layer_type,
+                activation_type=text_encoder_activation_type,
+                normalize_before=text_encoder_normalize_before,
+                dropout_rate=text_encoder_dropout_rate,
+                positional_dropout_rate=text_encoder_positional_dropout_rate,
+                attention_dropout_rate=text_encoder_attention_dropout_rate,
+                conformer_kernel_size=text_encoder_conformer_kernel_size,
+                use_macaron_style=use_macaron_style_in_text_encoder,
+                use_conformer_conv=use_conformer_conv_in_text_encoder,
+            )
         self.decoder = HiFiGANGenerator(
             in_channels=hidden_channels,
             out_channels=1,
@@ -246,7 +290,9 @@ class VITSGenerator(torch.nn.Module):
             self.spk_embed_dim = spk_embed_dim
             self.spemb_proj = torch.nn.Linear(spk_embed_dim, global_channels)
         self.langs = None
-        if langs is not None and langs > 1:
+        if use_encoder_w_lid:
+            self.langs = None
+        elif langs is not None and langs > 1:
             assert global_channels > 0
             self.langs = langs
             self.lang_emb = torch.nn.Embedding(langs, global_channels)
@@ -309,7 +355,10 @@ class VITSGenerator(torch.nn.Module):
 
         """
         # forward text encoder
-        x, m_p, logs_p, x_mask = self.text_encoder(text, text_lengths)
+        if self.use_encoder_w_lid:
+            x, m_p, logs_p, x_mask = self.text_encoder(text, text_lengths, lids)
+        else:
+            x, m_p, logs_p, x_mask = self.text_encoder(text, text_lengths)
 
         # calculate global conditioning
         g = None
@@ -449,7 +498,10 @@ class VITSGenerator(torch.nn.Module):
 
         """
         # encoder
-        x, m_p, logs_p, x_mask = self.text_encoder(text, text_lengths)
+        if self.use_encoder_w_lid:
+            x, m_p, logs_p, x_mask = self.text_encoder(text, text_lengths, lids)
+        else:
+            x, m_p, logs_p, x_mask = self.text_encoder(text, text_lengths)
         g = None
         if self.spks is not None:
             # (B, global_channels, 1)
@@ -572,3 +624,142 @@ class VITSGenerator(torch.nn.Module):
         #   [1., 1., 1., 1., 1.]]]       [0., 0., 0., 0., 1.]]]
         path = path - F.pad(path, [0, 0, 1, 0, 0, 0])[:, :-1]
         return path.unsqueeze(1).transpose(2, 3) * mask
+
+
+class TextEncoderWithLid(TextEncoder):
+    def __init__(
+        self,
+        vocabs: int,
+        attention_dim: int = 192,
+        attention_heads: int = 2,
+        linear_units: int = 768,
+        blocks: int = 6,
+        positionwise_layer_type: str = "conv1d",
+        positionwise_conv_kernel_size: int = 3,
+        positional_encoding_layer_type: str = "rel_pos",
+        self_attention_layer_type: str = "rel_selfattn",
+        activation_type: str = "swish",
+        normalize_before: bool = True,
+        use_macaron_style: bool = False,
+        use_conformer_conv: bool = False,
+        conformer_kernel_size: int = 7,
+        dropout_rate: float = 0.1,
+        positional_dropout_rate: float = 0.0,
+        attention_dropout_rate: float = 0.0,
+        langs: int = -1,
+        adapter: Any = None,
+    ):
+        super().__init__(
+            vocabs=vocabs,
+            attention_dim=attention_dim,
+            attention_heads=attention_heads,
+            linear_units=linear_units,
+            blocks=blocks,
+            positionwise_layer_type=positionwise_layer_type,
+            positionwise_conv_kernel_size=positionwise_conv_kernel_size,
+            positional_encoding_layer_type=positional_encoding_layer_type,
+            self_attention_layer_type=self_attention_layer_type,
+            activation_type=activation_type,
+            normalize_before=normalize_before,
+            use_macaron_style=use_macaron_style,
+            use_conformer_conv=use_conformer_conv,
+            conformer_kernel_size=conformer_kernel_size,
+            dropout_rate=dropout_rate,
+            positional_dropout_rate=positional_dropout_rate,
+            attention_dropout_rate=attention_dropout_rate,
+        )
+        self.adapter = adapter
+        self.lang_emb = torch.nn.Embedding(langs, attention_dim)
+    
+    def forward(
+        self,
+        x: torch.Tensor,
+        x_lengths: torch.Tensor,
+        lids: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Calculate forward propagation.
+
+        Args:
+            x (Tensor): Input index tensor (B, T_text).
+            x_lengths (Tensor): Length tensor (B,).
+
+        Returns:
+            Tensor: Encoded hidden representation (B, attention_dim, T_text).
+            Tensor: Projected mean tensor (B, attention_dim, T_text).
+            Tensor: Projected scale tensor (B, attention_dim, T_text).
+            Tensor: Mask tensor for input tensor (B, 1, T_text).
+
+        """
+        x = self.emb(x) * math.sqrt(self.attention_dim)
+        x_mask = (
+            make_non_pad_mask(x_lengths)
+            .to(
+                device=x.device,
+                dtype=x.dtype,
+            )
+            .unsqueeze(1)
+        )
+        # Adding language embedding
+        x += self.lang_emb(lids.view(-1)).unsqueeze(1)
+        # Applying adapter
+        if self.adapter is not None:
+            if isinstance(self.adapter, TransformerAdapter):
+                x, x_mask = self.adapter(x, x_mask)
+            else:
+                x = self.adapter(x)
+        # encoder assume the channel last (B, T_text, attention_dim)
+        # but mask shape shoud be (B, 1, T_text)
+        x, _ = self.encoder(x, x_mask)
+
+        # convert the channel first (B, attention_dim, T_text)
+        x = x.transpose(1, 2)
+        stats = self.proj(x) * x_mask
+        m, logs = stats.split(stats.size(1) // 2, dim=1)
+
+        return x, m, logs, x_mask
+
+
+class ResidualAdapter(torch.nn.Module):
+    def __init__(self, input_dim, hidden_dim):
+        super().__init__()
+        self.layer_norm = torch.nn.LayerNorm(input_dim, eps=1e-12)
+        # Down projection
+        self.in_linear = torch.nn.Linear(input_dim, hidden_dim)
+        # Up projection
+        self.out_linear = torch.nn.Linear(hidden_dim, input_dim)
+        self.relu = torch.nn.ReLU()
+    
+    def forward(self, x):
+        origin = x
+        x = self.in_linear(self.layer_norm(x))
+        x = self.out_linear(self.relu(x))
+        return x + origin
+
+
+class TransformerAdapter(torch.nn.Module):
+    def __init__(self, input_dim):
+        """
+        Adapter based on Transformer Encoder consisting of MultiHeadAttention.
+        """
+        super().__init__()
+        self.transformer_encoder = EncoderLayer(
+            input_dim,
+            MultiHeadedAttention(4, input_dim, 0.1),
+            PositionwiseFeedForward(
+                input_dim, 2048, 0.1),
+            dropout_rate=0.1,
+            normalize_before=True,
+            concat_after=False,
+            stochastic_depth_rate=0.0)
+    
+    def forward(self, x, mask):
+        # x: (batch, time, dim)
+        return self.transformer_encoder(x, mask)
+
+
+class IdentityAdapter(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = torch.nn.Identity()
+    def forward(self, x):
+        return self.net(x)

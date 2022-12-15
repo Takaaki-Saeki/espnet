@@ -276,7 +276,7 @@ class TransformerPretrain(AbsTTSPretrain):
         # forward encoder
         # (B, T)
         x_masks = self._source_mask(ilens)
-        xs_masked, mlm_target = self._bert_mask_v2(xs, ilens)
+        xs_masked, mlm_target = self._bert_mask_v2(xs)
         # Injecting language embedding inside the encoder
         if self.langs:
             lid_embs = self.lid_emb(lids.view(-1))
@@ -315,7 +315,7 @@ class TransformerPretrain(AbsTTSPretrain):
         return x_masks.unsqueeze(-2)
 
 
-    def _bert_mask_v2(self, xs, ilens):
+    def _bert_mask_v2(self, xs):
         """Make masks for masked language modeling.
 
         Following png bert implementation, we use the following mask scheme:

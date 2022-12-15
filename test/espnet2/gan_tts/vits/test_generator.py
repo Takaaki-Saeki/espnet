@@ -15,7 +15,7 @@ def make_generator_args(**kwargs):
         aux_channels=5,
         hidden_channels=4,
         spks=-1,
-        langs=-1,
+        langs=16,
         spk_embed_dim=-1,
         global_channels=-1,
         segment_size=4,
@@ -55,6 +55,9 @@ def make_generator_args(**kwargs):
         stochastic_duration_predictor_dropout_rate=0.5,
         stochastic_duration_predictor_flows=2,
         stochastic_duration_predictor_dds_conv_layers=3,
+        use_adapter=True,
+        adapter_type="identity",
+        use_encoder_w_lid=True
     )
     defaults.update(kwargs)
     return defaults

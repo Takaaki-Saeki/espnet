@@ -88,13 +88,13 @@ test_sets=test
 ./tts.sh \
     --lang ${lang} \
     --local_data_opts "${local_data_opts}" \
-    --feats_type speechbrain \
+    --feats_type raw \
     --use_lid ${use_lid} \
     --fs "${fs}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --use_xvector true \
-    --xvector_tool rawnet \
+    --xvector_tool speechbrain \
     --use_lvector ${use_lvector} \
     --lvector_feats_type fam \
     --token_type "${model_token_type}" \

@@ -95,7 +95,7 @@ class DataProcessor:
         self.mos_filtering = mos_filtering
         self.byte_len_filtering = byte_len_filtering
         self.mos_thresh = 2.0
-        self.byte_len_thresh = 250
+        self.byte_len_thresh = 300
         self.seed = 0
 
         if lang_set is not None:

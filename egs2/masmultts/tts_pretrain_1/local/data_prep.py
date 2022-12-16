@@ -142,7 +142,12 @@ class DataProcessorVoxp:
                 lang2utt[lname].append(uttid)
                 utt2lang[uttid] = lname
                 utt2text[uttid] = processed_text
-                byte_len = len(list(processed_text.encode("utf-8")))
+                # Byte length filtering
+                if self.token_type == "byte":
+                    byte_len = len(list(processed_text.encode("utf-8")))
+                else:
+                    byte_text = self.basic_normalizer(text.replace(" ", ""))
+                    byte_len = len(list(byte_text.encode("utf-8")))
                 if byte_len <= self.byte_len_thresh:
                     self.byte_len_filtered_utt.add(uttid)
             print("Removed {} utterances".format(cnt_removed))

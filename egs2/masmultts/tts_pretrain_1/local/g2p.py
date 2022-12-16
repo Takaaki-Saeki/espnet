@@ -96,6 +96,9 @@ def voxp():
         text_path = args.db_dir / lang / "sentences.txt"
         os.makedirs(out_dir / lang, exist_ok=True)
         out_path = out_dir / lang / "sentences_phn.txt"
+        if out_path.exists():
+            print(f"{lang} is already processed. Skipping.")
+            continue
     
         in_list = []
         out_list = []
@@ -109,9 +112,12 @@ def voxp():
             text = basic_normalizer(line)
             if len(text) == 0:
                 continue
-            tokenizer = phoneme_tokenizers[lcode]
-            phn_text = " ".join(tokenizer.text2tokens(text))
-            out_list.append(phn_text)
+            try:
+                tokenizer = phoneme_tokenizers[lcode]
+                phn_text = " ".join(tokenizer.text2tokens(text))
+                out_list.append(phn_text)
+            except:
+                continue
         
         with open(out_path, "w") as fw:
             fw.write("\n".join(out_list))

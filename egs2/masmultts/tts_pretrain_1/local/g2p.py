@@ -9,8 +9,8 @@ import pathlib
 import tqdm
 from espnet2.text.phoneme_tokenizer import PhonemeTokenizer
 import numpy
-import timeout_decorator
-
+import os
+import unicodedata
 
 def tsv():
     """Run phoneme conversion."""
@@ -83,6 +83,8 @@ def voxp():
     parser.add_argument("--db_dir", type=pathlib.Path, help="Input kaldi-style text.")
     args = parser.parse_args()
 
+    out_dir = pathlib.Path("data")
+
     phoneme_tokenizers = {}
     for lang in langtable_voxp().keys():
         lcode = langtable_voxp()[lang]
@@ -92,7 +94,8 @@ def voxp():
     for lang in langtable_voxp().keys():
         print(f"Processing {lang} ...")
         text_path = args.db_dir / lang / "sentences.txt"
-        out_path = args.db_dir / lang / "sentences_phn.txt"
+        os.makedirs(out_dir / lang, exist_ok=True)
+        out_path = out_dir / lang / "sentences_phn.txt"
     
         in_list = []
         out_list = []
@@ -101,15 +104,30 @@ def voxp():
                 in_list.append(line.strip())
             
         for line in tqdm.tqdm(in_list):
-            line_list = line.strip().split("\t")
-            lcode = g2p_langtable()[lang]
-            text = line_list[4]
+            lcode = langtable_voxp()[lang]
+            lcode = g2p_langtable()[lcode]
+            text = basic_normalizer(line)
+            if len(text) == 0:
+                continue
             tokenizer = phoneme_tokenizers[lcode]
             phn_text = " ".join(tokenizer.text2tokens(text))
             out_list.append(phn_text)
         
         with open(out_path, "w") as fw:
             fw.write("\n".join(out_list))
+
+def remove_symbols(s: str):
+    return "".join(
+        " " if unicodedata.category(c)[0] in "MSP" else c for c in unicodedata.normalize("NFKC", s)
+    )
+
+def basic_normalizer(s: str) -> str:
+    s = s.lower()
+    s = re.sub(r"[<\[][^>\]]*[>\]]", "", s)  # remove words between brackets
+    s = re.sub(r"\(([^)]+?)\)", "", s)  # remove words between parenthesis
+    s = remove_symbols(s).lower()
+    s = re.sub(r"\s+", " ", s)  # replace any successive whitespace characters with a space
+    return s
 
 
 class Phonemizer:
@@ -203,7 +221,6 @@ class PhonemeTokenizer(AbsTokenizer):
             ")"
         )
 
-    @timeout_decorator.timeout(10)
     def text2tokens(self, line: str) -> List[str]:
         tokens = []
         while len(line) != 0:
@@ -383,4 +400,4 @@ def g2p_langtable():
 
 
 if __name__ == "__main__":
-    tsv()
+    voxp()

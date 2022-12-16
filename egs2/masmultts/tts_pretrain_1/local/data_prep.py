@@ -64,6 +64,7 @@ class DataProcessorVoxp:
         byte_len_filtering=False
     ):
         self.dst_dir = pathlib.Path("data")
+        self.token_type = token_type
         if token_type == "byte":
             self.token_suffix=""
         elif token_type == "phn":
@@ -130,7 +131,10 @@ class DataProcessorVoxp:
             for idx, text in tqdm.tqdm(enumerate(in_list)):
                 index = "0"*(10 - len(str(idx))) + str(idx)
                 uttid = f"{lname}_{index}"
-                processed_text = self.basic_normalizer(text)
+                if self.token_type == "byte":
+                    processed_text = self.basic_normalizer(text)
+                else:
+                    processed_text = text
                 processed_text = processed_text.strip()
                 if processed_text == "":
                     cnt_removed += 1

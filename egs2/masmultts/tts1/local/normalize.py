@@ -30,7 +30,6 @@ ADDITIONAL_DIACRITICS = {
     "Ł": "L",
 }
 
-
 def remove_symbols_and_diacritics(s: str, keep=""):
     """
     Replace any other markers, symbols, and punctuations with a space,

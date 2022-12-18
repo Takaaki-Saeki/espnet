@@ -19,6 +19,7 @@ ln -s "../tts1/nisqa_results_fleurs.csv" "nisqa_results_fleurs.csv"
 ln -s "../tts1/tts.sh" "tts.sh"
 
 cp -r "../tts_vits_phn_css10_all/conf" .
+cp -r "../tts_vits_phn_css10_all/lang_set.txt" .
 cp -r "../tts_vits_phn_css10_all/run.sh" .
 
 echo "Successfully finished!"

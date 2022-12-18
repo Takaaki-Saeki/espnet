@@ -81,7 +81,7 @@ fi
 train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
-train_set=dev
+train_set=train
 valid_set=dev
 test_sets=test
 

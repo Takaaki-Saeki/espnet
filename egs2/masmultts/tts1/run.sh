@@ -26,7 +26,7 @@ spk_set=null
 n_train_utt=null
 override_spk_set=null
 lang2lid_override=null
-token_list_override="local/token_list_${token_type}.txt"
+token_list_override=null
 #########################################################
 
 local_data_opts=""
@@ -88,13 +88,13 @@ test_sets=test
 ./tts.sh \
     --lang ${lang} \
     --local_data_opts "${local_data_opts}" \
-    --feats_type speechbrain \
+    --feats_type raw \
     --use_lid ${use_lid} \
     --fs "${fs}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
     --use_xvector true \
-    --xvector_tool rawnet \
+    --xvector_tool speechbrain \
     --use_lvector ${use_lvector} \
     --lvector_feats_type fam \
     --token_type "${model_token_type}" \

@@ -102,7 +102,7 @@ test_sets=test
     --g2p "${g2p}" \
     --train_config "${train_config}" \
     --inference_config "${inference_config}" \
-    --inference_model train.loss.best.pth \
+    --inference_model valid.loss.best.pth \
     --min_wav_duration 0.1 \
     --max_wav_duration 15 \
     --train_set "${train_set}" \

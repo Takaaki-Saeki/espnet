@@ -18,7 +18,7 @@ use_lid=true
 use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
-lang_set="lang_set.txt"
+lang_set="lang_set_decode.txt"
 holdout_lang_set=null
 do_trimming=false
 lang_family=null
@@ -102,7 +102,7 @@ test_sets=test
     --g2p "${g2p}" \
     --train_config "${train_config}" \
     --inference_config "${inference_config}" \
-    --inference_model train.loss.best.pth \
+    --inference_model valid.loss.best.pth \
     --min_wav_duration 0.1 \
     --max_wav_duration 15 \
     --train_set "${train_set}" \

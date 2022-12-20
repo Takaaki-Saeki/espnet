@@ -40,10 +40,10 @@ function evaluate () {
 }
 
 # Need to set "ref_name" because data/text in phn case includes dumped phoneme tokens.
-evaluate "tts_phn_css10" "tts_byte_css10" "phn" true
+# evaluate "tts_phn_css10" "tts_byte_css10" "phn" true
 # evaluate "tts_byte_css10" "tts_byte_css10" "byte" false
 # evaluate "tts_phn_css10_all" "tts_byte_css10" "phn" false
-# evaluate "tts_byte_1L_de" "tts_byte_1L_de" "byte" true
+evaluate "tts_byte_1L_de" "tts_byte_1L_de" "byte" true
 # evaluate "tts_byte_1L_es_renamed" "tts_byte_1L_es_renamed" "byte" true
 # evaluate "tts_phn_1L_de" "tts_byte_1L_de" "phn" true
 # evaluate "tts_phn_1L_es" "tts_byte_1L_es_renamed" "phn" true

@@ -61,4 +61,10 @@ function process () {
     echo "Successfully finished!"
 }
 
+# process "tts_phn_1L_de" "phn"
+# process "tts_byte_1L_de" "byte"
+# process "tts_phn_1L_es" "phn"
+# process "tts_byte_1L_es_renamed" "byte"
+# process "tts_phn_css10" "phn"
+# process "tts_phn_css10_all" "phn"
 process "tts_byte_css10" "byte"

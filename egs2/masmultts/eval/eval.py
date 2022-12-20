@@ -14,6 +14,7 @@ import torchaudio
 import argparse
 import jiwer
 from whisper.normalizers import BasicTextNormalizer
+from collections import defaultdict
 
 import tqdm
 
@@ -221,6 +222,25 @@ def main():
 
     lang_supported = list(lang_supported)
 
+    # Couning number of characters
+    n_char_min = 1e+10
+    n_chars = {}
+    n_texts = defaultdict(int)
+    for lang in lang_supported:
+        reference_clean = [normalizer(text) for text in references[lang]]
+        n_chars[lang] = sum([len(text) for text in reference_clean])
+        n_char_min = min(n_chars[lang], n_char_min)
+    for lang in lang_supported:
+        reference_clean = [normalizer(text) for text in references[lang]]
+        sum_chars = 0
+        for text in reference_clean:
+            if sum_chars > n_char_min:
+                break
+            else:
+                sum_chars += len(text)
+                n_texts[lang] += 1
+    print(f"Minimum char length: {n_char_min}")
+
     for lang in lang_supported:
 
         try:
@@ -230,16 +250,23 @@ def main():
             data = pd.DataFrame(data_dict)
             data["hypothesis_clean"] = [normalizer(text) for text in data["hypothesis"]]
             data["reference_clean"] = [normalizer(text) for text in data["reference"]]
+            # Refining based on n_texts
+            # print(f'Reducing number of texts from {len(data["hypothesis_clean"])} to {n_texts[lang]} ...')
+            #wer = jiwer.wer(list(data["reference_clean"])[:n_texts[lang]], list(data["hypothesis_clean"])[:n_texts[lang]])
             wer = jiwer.wer(list(data["reference_clean"]), list(data["hypothesis_clean"]))
+            #cer = jiwer.cer(list(data["reference_clean"])[:n_texts[lang]], list(data["hypothesis_clean"])[:n_texts[lang]])
             cer = jiwer.cer(list(data["reference_clean"]), list(data["hypothesis_clean"]))
             if args.calc_gt:
                 data["hypothesis_gt_clean"] = [normalizer(text) for text in data["hypothesis_gt"]]
+                # wer_gt = jiwer.wer(list(data["reference_clean"])[:n_texts[lang]], list(data["hypothesis_gt_clean"])[:n_texts[lang]])
                 wer_gt = jiwer.wer(list(data["reference_clean"]), list(data["hypothesis_gt_clean"]))
+                # cer_gt = jiwer.cer(list(data["reference_clean"])[:n_texts[lang]], list(data["hypothesis_gt_clean"])[:n_texts[lang]])
                 cer_gt = jiwer.cer(list(data["reference_clean"]), list(data["hypothesis_gt_clean"]))
                 out_list.append(" ".join([f"{lang}", f"{wer:.2%}", f"{cer:.2%}", f"{wer_gt:.2%}", f"{cer_gt:.2%}"]))
             else:
                 out_list.append(" ".join([f"{lang}", f"{wer:.2%}", f"{cer:.2%}"]))
-        except:
+        except BaseException as e:
+            print(e)
             print(f"{lang} has not been properly processed!")
             
     with open(result_dir / f"{args.case_name}.csv", "w") as fw:

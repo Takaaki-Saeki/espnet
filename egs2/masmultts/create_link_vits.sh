@@ -20,6 +20,8 @@ ln -s "../tts1/tts.sh" "tts.sh"
 
 cp -r "../tts_vits_phn_css10_all/conf" .
 cp -r "../tts_vits_phn_css10_all/lang_set.txt" .
+cp -r "../tts_vits_phn_css10_all/lang_set_decode.txt" .
 cp -r "../tts_vits_phn_css10_all/run.sh" .
+cp -r "../tts_vits_phn_css10_all/decode.sh" .
 
 echo "Successfully finished!"

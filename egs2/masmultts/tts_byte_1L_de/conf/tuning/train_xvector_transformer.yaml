@@ -27,7 +27,7 @@ tts_conf:                  # keyword arguments for the selected model
     postnet_layers: 5                # number of layers of postnset
     postnet_filts: 5                 # filter size of conv layers in postnet
     postnet_chans: 256               # number of channels of conv layers in postnet
-    spk_embed_dim: 512               # dimension of speaker embedding
+    spk_embed_dim: 192               # dimension of speaker embedding
     spk_embed_integration_type: add  # how to integrate speaker embedding
     use_masking: True                # whether to apply masking for padded part in loss calculation
     bce_pos_weight: 5.0              # weight of positive sample in binary cross entropy calculation
@@ -64,25 +64,26 @@ optim_conf:             # keyword arguments for selected optimizer
 scheduler: noamlr       # scheduler type
 scheduler_conf:         # keyword arguments for selected scheduler
     model_size: 512     # model size, a.k.a., attention dimenstion
-    warmup_steps: 12000 # the number of warmup steps
+    warmup_steps: 10000 # the number of warmup steps
 
 ##########################################################
 #                OTHER TRAINING SETTING                  #
 ##########################################################
-num_iters_per_epoch: 1000   # number of iterations per epoch
-max_epoch: 1000             # number of epochs
+# num_iters_per_epoch: 100000   # number of iterations per epoch
+max_epoch: 400             # number of epochs
 grad_clip: 1.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 2               # gradient accumulation
-batch_bins: 9000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
+# batch_bins: 9000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
+batch_bins: 400000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
 batch_type: numel           # how to make batch
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches
 num_workers: 1              # number of workers of data loader
 train_dtype: float32        # dtype in training
 log_interval: null          # log interval in iterations
-keep_nbest_models: 5        # number of models to keep
-num_att_plot: 3             # number of attention figures to be saved in every check
+keep_nbest_models: 3        # number of models to keep
+num_att_plot: 1             # number of attention figures to be saved in every check
 seed: 0                     # random seed number
 best_model_criterion:
 -   - valid

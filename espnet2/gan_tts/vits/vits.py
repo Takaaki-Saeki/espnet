@@ -264,6 +264,8 @@ class VITS(AbsGANTTS):
         self.spks = self.generator.spks
         self.langs = self.generator.langs
         self.spk_embed_dim = self.generator.spk_embed_dim
+        # Disabling lang embed dim for vits
+        self.lang_embed_dim = None
 
     @property
     def require_raw_speech(self):

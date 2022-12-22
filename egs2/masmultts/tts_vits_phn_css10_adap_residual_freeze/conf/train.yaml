@@ -194,5 +194,5 @@ freeze_param: [
 "tts.generator.text_encoder.lang_emb",
 ]
 init_param: [
-"../tts_pretrain_vits_phn_residual/exp/tts_train_phn_none/2epoch.pth:tts_pretrain.generator.text_encoder:tts.generator.text_encoder"
+"../tts_pretrain_vits_phn_residual/exp/tts_train_phn_none/3epoch.pth:tts_pretrain.generator.text_encoder:tts.generator.text_encoder"
 ]

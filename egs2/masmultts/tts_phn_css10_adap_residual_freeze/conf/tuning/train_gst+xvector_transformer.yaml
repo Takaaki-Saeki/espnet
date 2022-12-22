@@ -108,6 +108,6 @@ freeze_param: [
 "tts.lid_emb",
 ]
 init_param: [
-"../tts_pretrain_phn_residual/exp/tts_train_phn_none/2epoch.pth:tts_pretrain.encoder:tts.encoder",
-"../tts_pretrain_phn_residual/exp/tts_train_phn_none/2epoch.pth:tts_pretrain.lid_emb:tts.lid_emb",
+"../tts_pretrain_phn_residual/exp/tts_train_phn_none/3epoch.pth:tts_pretrain.encoder:tts.encoder",
+"../tts_pretrain_phn_residual/exp/tts_train_phn_none/3epoch.pth:tts_pretrain.lid_emb:tts.lid_emb",
 ]

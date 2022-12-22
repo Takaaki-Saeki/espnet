@@ -18,6 +18,7 @@ use_css10=false
 use_fleurs=false
 use_mailabs=false
 use_voxp=false
+use_cv=false
 byte_len_filtering=true
 lang_set=null
 
@@ -36,6 +37,9 @@ if [ ${use_mailabs} = true ]; then
 fi
 if [ ${use_voxp} = true ]; then
     opts_data+=" --use_voxp"
+fi
+if [ ${use_cv} = true ]; then
+    opts_data+=" --use_cv"
 fi
 if [ ${byte_len_filtering} = true ]; then
     opts_data+=" --byte_len_filtering"

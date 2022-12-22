@@ -55,6 +55,148 @@ def langtable_voxp():
         "lt": "lt_lt"
     }
 
+def langtable_cv():
+    return {
+        "ar": "ar_eg", "as": "as_in", "az": "az_az", "bg": "bg_bg", "ca": "ca_es",
+        "cmn": "cmn_hans_cn", "cy": "cy_gb", "de": "de_de", "en": "en_us", "et": "et_ee",
+        "fi": "fi_fi", "ga": "ga_ie", "ha": "ha_ng", "hu": "hu_hu", "id": "id_id",
+        "it": "it_it", "ka": "ka_ge", "ky": "ky_kg", "lt": "lt_lt", "mk": "mk_mk",
+        "mn": "mn_mn", "mt": "mt_mt", "nl": "nl_nl", "pa": "pa_in", "pt": "pt_br",
+        "ru": "ru_ru", "ast": "ast_es", "be": "be_by", "bn": "bn_in", "ckb": "ckb_iq",
+        "cs": "cs_cz", "da": "da_dk", "el": "el_gr", "es": "es_419", "fa": "fa_ir",
+        "fr": "fr_fr", "gl": "gl_es", "hi": "hi_in", "hy": "hy_am", "ig": "ig_ng",
+        "ja": "ja_jp", "kk": "kk_kz", "lg": "lg_ug", "lv": "lv_lv", "ml": "ml_in",
+        "mr": "mr_in", "ne": "ne_np", "or": "or_in", "pl": "pl_pl", "ro": "ro_ro",
+        "sc": "sc_it", "sk": "sk_sk", "sl": "sl_si", "sr": "sr_rs", "sv": "sv_se",
+        "sw": "sw_tz", "ta": "ta_in", "th": "th_th", "tr": "tr_tr", "ug": "ug_cn",
+        "uk": "uk_ua", "ur": "ur_pk", "uz": "uz_uz", "vi": "vi_vn", "yue": "yue_hant_hk",
+    }
+
+class DataProcessorCV:
+    def __init__(
+        self,
+        db_dir,
+        token_type="byte",
+        lang_set=None,
+        byte_len_filtering=False
+    ):
+        self.dst_dir = pathlib.Path("data")
+        self.token_type = token_type
+        if token_type == "byte":
+            self.token_suffix=""
+        elif token_type == "phn":
+            self.token_suffix="_phn"
+        self.db_dir = db_dir / "cv_text"
+        self.data_type = "cv"
+        self.seed = 0
+
+        self.cv_langs = list(langtable_cv().keys())
+        all_langs = [langtable_cv()[lang] for lang in self.cv_langs]
+
+        if lang_set is not None:
+            with open(lang_set, "r") as fr:
+                self.lang_set = [line.strip() for line in fr]
+                self.lang_set = [lang for lang in self.lang_set if lang in all_langs]
+        else:
+            self.lang_set = None
+
+        self.n_dev = 50
+        self.n_test = 50
+
+        self.byte_len_filtering = byte_len_filtering
+        self.byte_len_thresh = 500
+        self.byte_len_filtered_utt = set()
+
+    def get_byte_len_filtered_uttids(self, utt_list):
+        print(f"Filtering utterances with byte lengths: {self.byte_len_thresh}")
+        out_utt_list = [
+            uttid for uttid in utt_list if uttid in self.byte_len_filtered_utt]
+        return out_utt_list
+
+    def remove_symbols(self, s: str):
+        return "".join(
+            " " if unicodedata.category(c)[0] in "MSP" else c for c in unicodedata.normalize("NFKC", s)
+        )
+
+    def basic_normalizer(self, s: str) -> str:
+        s = s.lower()
+        s = re.sub(r"[<\[][^>\]]*[>\]]", "", s)  # remove words between brackets
+        s = re.sub(r"\(([^)]+?)\)", "", s)  # remove words between parenthesis
+        s = self.remove_symbols(s).lower()
+        s = re.sub(r"\s+", " ", s)  # replace any successive whitespace characters with a space
+
+        return s
+
+    def process(self):
+
+        lang2utt = defaultdict(list)
+        utt2lang = {}
+        utt2text = {}
+
+        for lang in self.cv_langs:
+            lname = langtable_cv()[lang]
+            if self.lang_set is not None:
+                if lname not in self.lang_set:
+                    continue
+            text_path = self.db_dir / lang / f"sentences{self.token_suffix}.txt"
+            with open(text_path, "r") as fr:
+                in_list = [line.strip() for line in fr]
+            print(f"Processing {lang} ...")
+            cnt_removed = 0
+            for idx, text in tqdm.tqdm(enumerate(in_list)):
+                index = "0"*(10 - len(str(idx))) + str(idx)
+                uttid = f"{lname}_{index}"
+                if self.token_type == "byte":
+                    processed_text = self.basic_normalizer(text)
+                else:
+                    processed_text = text
+                processed_text = processed_text.strip()
+                if processed_text == "":
+                    cnt_removed += 1
+                    continue
+                lang2utt[lname].append(uttid)
+                utt2lang[uttid] = lname
+                utt2text[uttid] = processed_text
+                # Byte length filtering
+                if self.token_type == "byte":
+                    byte_len = len(list(processed_text.encode("utf-8")))
+                else:
+                    byte_text = self.basic_normalizer(text.replace(" ", ""))
+                    byte_len = len(list(byte_text.encode("utf-8")))
+                if byte_len <= self.byte_len_thresh:
+                    self.byte_len_filtered_utt.add(uttid)
+            print("Removed {} utterances".format(cnt_removed))
+
+        uttids_all = {"train": [], "dev": [], "test": []}
+
+        for lang in lang2utt.keys():
+            np.random.seed(self.seed)
+            rand_idx = np.random.permutation(len(lang2utt[lang]))
+            train_idx = rand_idx[self.n_dev+self.n_test :]
+            uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
+            dev_idx = rand_idx[: self.n_dev]
+            uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
+            test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
+            uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
+        
+        for setname in ["train", "dev", "test"]:
+            utt_list = uttids_all[setname]
+            if setname == "train" and self.byte_len_filtering:
+                utt_list = self.get_byte_len_filtered_uttids(utt_list)
+
+            utt2lang_list = []
+            text_list = []
+            for uttid in utt_list:
+                utt2lang_list.append(f"{uttid} {utt2lang[uttid]}")
+                text_list.append(f"{uttid} {utt2text[uttid]}")
+
+            destination = self.dst_dir / self.data_type / setname
+            os.makedirs(destination, exist_ok=True)
+            with open(destination / "utt2lang", "w") as fw:
+                fw.write("\n".join(utt2lang_list))
+            with open(destination / "text", "w") as fw:
+                fw.write("\n".join(text_list))
+
 class DataProcessorVoxp:
     def __init__(
         self,
@@ -333,6 +475,7 @@ def main():
     parser.add_argument("--use_fleurs", action="store_true")
     parser.add_argument("--use_css10", action="store_true")
     parser.add_argument("--use_voxp", action="store_true")
+    parser.add_argument("--use_cv", action="store_true")
     parser.add_argument("--byte_len_filtering", action="store_true")
     parser.add_argument("--lang_set", default=None, type=pathlib.Path)
     args = parser.parse_args()
@@ -386,6 +529,16 @@ def main():
             args.byte_len_filtering
         ).process()
         data_types.append("voxp")
+
+    if args.use_cv:
+        print("Processing Common Voice ...")
+        DataProcessorCV(
+            args.db_dir,
+            args.token_type,
+            args.lang_set,
+            args.byte_len_filtering
+        ).process()
+        data_types.append("cv")
     
     assert len(data_types) > 0, "No data type is specified."
 

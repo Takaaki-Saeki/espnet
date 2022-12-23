@@ -96,3 +96,6 @@ best_model_criterion:
 -   - train
     - loss
     - min
+init_param: [
+"../tts_phn_1L_pretrain_en/exp/tts_train_raw_phn_none/valid.loss.best.pth"
+]

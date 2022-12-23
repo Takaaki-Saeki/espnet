@@ -153,7 +153,7 @@ class DataProcessorParaCrawl:
             cnt_removed = 0
             for idx, text in tqdm.tqdm(enumerate(in_list)):
                 index = "0"*(10 - len(str(idx))) + str(idx)
-                uttid = f"{lname}_{index}"
+                uttid = f"{self.data_type}_{lname}_{index}"
                 if self.token_type == "byte":
                     processed_text = self.basic_normalizer(text)
                 else:
@@ -278,7 +278,7 @@ class DataProcessorCV:
             cnt_removed = 0
             for idx, text in tqdm.tqdm(enumerate(in_list)):
                 index = "0"*(10 - len(str(idx))) + str(idx)
-                uttid = f"{lname}_{index}"
+                uttid = f"{self.data_type}_{lname}_{index}"
                 if self.token_type == "byte":
                     processed_text = self.basic_normalizer(text)
                 else:
@@ -405,7 +405,7 @@ class DataProcessorVoxp:
             cnt_removed = 0
             for idx, text in tqdm.tqdm(enumerate(in_list)):
                 index = "0"*(10 - len(str(idx))) + str(idx)
-                uttid = f"{lname}_{index}"
+                uttid = f"{self.data_type}_{lname}_{index}"
                 if self.token_type == "byte":
                     processed_text = self.basic_normalizer(text)
                 else:

@@ -494,7 +494,7 @@ class DataProcessor:
             self.langtable = None
             self.data_name = "fleurs"
             self.n_dev = 10
-            self.n_test = 20
+            self.n_test = 100
         
         self.byte_len_filtered_utt = None
         if self.byte_len_filtering:

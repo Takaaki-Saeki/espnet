@@ -72,6 +72,139 @@ def langtable_cv():
         "uk": "uk_ua", "ur": "ur_pk", "uz": "uz_uz", "vi": "vi_vn", "yue": "yue_hant_hk",
     }
 
+def langtable_paracrawl():
+    return {
+        "en": "en_us", "de": "de_de", "es": "es_419", "cs": "cs_cz", "fi": "fi_fi",
+        "fr": "fr_fr", "hr": "hr_hr", "hu": "hu_hu", "it": "it_it", "nl": "nl_nl",
+        "pl": "pl_pl", "ro": "ro_ro", "sk": "sk_sk", "sl": "sl_si", "et": "et_ee",
+        "lt": "lt_lt", "el": "el_gr", "ru": "ru_ru", "uk": "uk_ua"
+    }
+
+class DataProcessorParaCrawl:
+    def __init__(
+        self,
+        db_dir,
+        token_type="byte",
+        lang_set=None,
+        byte_len_filtering=False
+    ):
+        self.dst_dir = pathlib.Path("data")
+        self.token_type = token_type
+        if token_type == "byte":
+            self.token_suffix=""
+        elif token_type == "phn":
+            self.token_suffix="_phn"
+        self.db_dir = db_dir / "paracrawl_clean_text"
+        self.data_type = "paracrawl"
+        self.seed = 0
+
+        self.paracrawl_langs = list(langtable_paracrawl().keys())
+        all_langs = [langtable_paracrawl()[lang] for lang in self.paracrawl_langs]
+
+        if lang_set is not None:
+            with open(lang_set, "r") as fr:
+                self.lang_set = [line.strip() for line in fr]
+                self.lang_set = [lang for lang in self.lang_set if lang in all_langs]
+        else:
+            self.lang_set = None
+
+        self.n_dev = 50
+        self.n_test = 50
+
+        self.byte_len_filtering = byte_len_filtering
+        self.byte_len_thresh = 500
+        self.byte_len_filtered_utt = set()
+
+    def get_byte_len_filtered_uttids(self, utt_list):
+        print(f"Filtering utterances with byte lengths: {self.byte_len_thresh}")
+        out_utt_list = [
+            uttid for uttid in utt_list if uttid in self.byte_len_filtered_utt]
+        return out_utt_list
+
+    def remove_symbols(self, s: str):
+        return "".join(
+            " " if unicodedata.category(c)[0] in "MSP" else c for c in unicodedata.normalize("NFKC", s)
+        )
+
+    def basic_normalizer(self, s: str) -> str:
+        s = s.lower()
+        s = re.sub(r"[<\[][^>\]]*[>\]]", "", s)  # remove words between brackets
+        s = re.sub(r"\(([^)]+?)\)", "", s)  # remove words between parenthesis
+        s = self.remove_symbols(s).lower()
+        s = re.sub(r"\s+", " ", s)  # replace any successive whitespace characters with a space
+
+        return s
+
+    def process(self):
+
+        lang2utt = defaultdict(list)
+        utt2lang = {}
+        utt2text = {}
+
+        for lang in self.paracrawl_langs:
+            lname = langtable_paracrawl()[lang]
+            if self.lang_set is not None:
+                if lname not in self.lang_set:
+                    continue
+            text_path = self.db_dir / lang / f"sentences{self.token_suffix}.txt"
+            with open(text_path, "r") as fr:
+                in_list = [line.strip() for line in fr]
+            print(f"Processing {lang} ...")
+            cnt_removed = 0
+            for idx, text in tqdm.tqdm(enumerate(in_list)):
+                index = "0"*(10 - len(str(idx))) + str(idx)
+                uttid = f"{lname}_{index}"
+                if self.token_type == "byte":
+                    processed_text = self.basic_normalizer(text)
+                else:
+                    processed_text = text
+                processed_text = processed_text.strip()
+                if processed_text == "":
+                    cnt_removed += 1
+                    continue
+                lang2utt[lname].append(uttid)
+                utt2lang[uttid] = lname
+                utt2text[uttid] = processed_text
+                # Byte length filtering
+                if self.token_type == "byte":
+                    byte_len = len(list(processed_text.encode("utf-8")))
+                else:
+                    byte_text = self.basic_normalizer(text.replace(" ", ""))
+                    byte_len = len(list(byte_text.encode("utf-8")))
+                if byte_len <= self.byte_len_thresh:
+                    self.byte_len_filtered_utt.add(uttid)
+            print("Removed {} utterances".format(cnt_removed))
+
+        uttids_all = {"train": [], "dev": [], "test": []}
+
+        for lang in lang2utt.keys():
+            np.random.seed(self.seed)
+            rand_idx = np.random.permutation(len(lang2utt[lang]))
+            train_idx = rand_idx[self.n_dev+self.n_test :]
+            uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
+            dev_idx = rand_idx[: self.n_dev]
+            uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
+            test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
+            uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
+        
+        for setname in ["train", "dev", "test"]:
+            utt_list = uttids_all[setname]
+            if setname == "train" and self.byte_len_filtering:
+                utt_list = self.get_byte_len_filtered_uttids(utt_list)
+
+            utt2lang_list = []
+            text_list = []
+            for uttid in utt_list:
+                utt2lang_list.append(f"{uttid} {utt2lang[uttid]}")
+                text_list.append(f"{uttid} {utt2text[uttid]}")
+
+            destination = self.dst_dir / self.data_type / setname
+            os.makedirs(destination, exist_ok=True)
+            with open(destination / "utt2lang", "w") as fw:
+                fw.write("\n".join(utt2lang_list))
+            with open(destination / "text", "w") as fw:
+                fw.write("\n".join(text_list))
+
 class DataProcessorCV:
     def __init__(
         self,
@@ -476,6 +609,7 @@ def main():
     parser.add_argument("--use_css10", action="store_true")
     parser.add_argument("--use_voxp", action="store_true")
     parser.add_argument("--use_cv", action="store_true")
+    parser.add_argument("--use_paracrawl", action="store_true")
     parser.add_argument("--byte_len_filtering", action="store_true")
     parser.add_argument("--lang_set", default=None, type=pathlib.Path)
     args = parser.parse_args()
@@ -539,6 +673,16 @@ def main():
             args.byte_len_filtering
         ).process()
         data_types.append("cv")
+
+    if args.use_paracrawl:
+        print("Processing ParaCrawl ...")
+        DataProcessorParaCrawl(
+            args.db_dir,
+            args.token_type,
+            args.lang_set,
+            args.byte_len_filtering
+        ).process()
+        data_types.append("paracrawl")
     
     assert len(data_types) > 0, "No data type is specified."
 

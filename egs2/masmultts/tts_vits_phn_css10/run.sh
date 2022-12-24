@@ -10,11 +10,10 @@ n_fft=1024
 n_shift=256
 
 ################# Configs to be set #####################
-token_type=byte   # byte, tphn, phn, bphn
-use_mailabs=true
+token_type=phn           # byte, tphn, phn, bphn
+use_mailabs=false
 use_css10=true
-use_fleurs=true
-use_other_tts_data=false
+use_fleurs=false
 use_lid=false
 use_lvector=false
 mos_filtering=false
@@ -35,7 +34,6 @@ local_data_opts+=" --token_type ${token_type}"
 local_data_opts+=" --use_mailabs ${use_mailabs}"
 local_data_opts+=" --use_css10 ${use_css10}"
 local_data_opts+=" --use_fleurs ${use_fleurs}"
-local_data_opts+=" --use_other_tts_data ${use_other_tts_data}"
 local_data_opts+=" --mos_filtering ${mos_filtering}"
 local_data_opts+=" --byte_len_filtering ${byte_len_filtering}"
 local_data_opts+=" --lang_set ${lang_set}"
@@ -95,16 +93,18 @@ test_sets=test
     --fs "${fs}" \
     --n_fft "${n_fft}" \
     --n_shift "${n_shift}" \
+    --win_length null \
     --use_xvector true \
     --xvector_tool speechbrain \
-    --use_lvector ${use_lvector} \
-    --lvector_feats_type fam \
     --token_type "${model_token_type}" \
     --cleaner "${cleaner}" \
     --g2p "${g2p}" \
+    --tts_task gan_tts \
+    --feats_extract linear_spectrogram \
+    --feats_normalize none \
     --train_config "${train_config}" \
     --inference_config "${inference_config}" \
-    --inference_model valid.loss.best.pth \
+    --inference_model latest.pth \
     --min_wav_duration 0.1 \
     --max_wav_duration 15 \
     --train_set "${train_set}" \

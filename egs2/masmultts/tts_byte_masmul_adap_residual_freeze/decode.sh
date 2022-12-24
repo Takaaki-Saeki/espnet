@@ -13,21 +13,21 @@ n_shift=256
 token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
-use_fleurs=true
-use_other_tts_data=false
-use_lid=false
+use_fleurs=false
+use_other_tts_data=true
+use_lid=true
 use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
-lang_set="lang_set.txt"
+lang_set="lang_set_decode.txt"
 holdout_lang_set=null
 do_trimming=false
 lang_family=null
 spk_set=null
 n_train_utt=null
 override_spk_set=null
-lang2lid_override=null
-token_list_override="local/token_list_20_${token_type}.txt"
+lang2lid_override="local/lang2lid_override_100"
+token_list_override="local/token_list_100_${token_type}.txt"
 #########################################################
 
 local_data_opts=""

@@ -74,6 +74,145 @@ def langtable_css10():
         "spanish": "es_419",
     }
 
+class DataProcessorOther:
+    def __init__(
+        self,
+        data_type,
+        tsv_path,
+        token_type,
+        lang_set=None,
+        byte_len_filtering=False,
+    ):
+        self.dst_dir = pathlib.Path("data")
+        self.data_type = data_type
+        self.tsv_path = tsv_path
+        self.token_type = token_type
+        self.byte_len_filtering = byte_len_filtering
+        self.byte_len_thresh = 300
+        self.seed = 0
+
+        if lang_set is not None:
+            with open(lang_set, "r") as fr:
+                self.lang_set = [line.strip() for line in fr]
+        else:
+            self.lang_set = None
+        
+        self.langtable = None
+
+        self.data_name = "other_tts_data"
+        self.n_dev = 10
+        self.n_test = 100
+        
+        self.byte_len_filtered_utt = None
+        if self.byte_len_filtering:
+            self.byte_len_filtered_utt = set()
+            tsv_path_norm = self.tsv_path.parent / f"{self.data_name}_norm.tsv"
+            with open(tsv_path_norm, "r") as fr:
+                for line in fr:
+                    line_list = line.strip().split("\t")
+                    if len(line_list) < 5:
+                        continue
+                    uttid = line_list[0]
+                    text = line_list[4]
+                    byte_len = len(list(text.encode("utf-8")))
+                    if byte_len <= self.byte_len_thresh:
+                        self.byte_len_filtered_utt.add(uttid)
+
+    def get_byte_len_filtered_uttids(self, utt_list):
+        print(f"Filtering utterances with byte lengths: {self.byte_len_thresh}")
+        out_utt_list = [
+            uttid for uttid in utt_list if uttid in self.byte_len_filtered_utt]
+        return out_utt_list
+
+    def remove_non_printable_chars(self, in_string):
+        return ''.join(c for c in in_string if c.isprintable())
+
+    def process(self):
+
+        db_dir = self.tsv_path.parent
+
+        lang2utt = defaultdict(list)
+        utt2spk = {}
+        utt2lang = {}
+        utt2wav = {}
+        utt2text = {}
+
+        with open(self.tsv_path, "r") as fr:
+            for line in fr:
+                line_list = line.strip().split("\t")
+                if len(line_list) != 5:
+                    # Filtering out invalid data
+                    continue
+                if len(line_list[1].split(".")) != 2:
+                    # Filtering out invalid data
+                    continue
+                elif line_list[1].split(".")[-1] != "wav":
+                    # Filtering out invalid data
+                    continue
+                uttid = line_list[0]
+                wavpath = db_dir / self.data_name / line_list[1]
+                lang = line_list[2]
+                spk = line_list[3]
+                text = line_list[4]
+                if self.token_type == "byte":
+                    # Removing invalid characters
+                    text = self.remove_non_printable_chars(text)
+                    text = text.replace("\u3000", " ")
+                    text = text.lower()
+                if self.langtable is not None:
+                    lang = self.langtable[lang]
+                if self.lang_set is not None:
+                    if lang not in self.lang_set:
+                        continue
+                lang2utt[lang].append(uttid)
+                utt2spk[uttid] = spk
+                utt2lang[uttid] = lang
+                utt2wav[uttid] = wavpath
+                utt2text[uttid] = text
+
+        uttids_all = {"train": [], "dev": [], "test": []}
+
+        for lang in lang2utt.keys():
+            np.random.seed(self.seed)
+            rand_idx = np.random.permutation(len(lang2utt[lang]))
+            train_idx = rand_idx[self.n_dev+self.n_test :]
+            uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
+            dev_idx = rand_idx[: self.n_dev]
+            uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
+            test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
+            uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
+        
+        for setname in ["train", "dev", "test"]:
+            utt_list = uttids_all[setname]
+            if setname == "train" and self.byte_len_filtering:
+                utt_list = self.get_byte_len_filtered_uttids(utt_list)
+
+            utt2lang_list = []
+            wavscp_list = []
+            utt2spk_list = []
+            text_list = []
+            d_spk2utt = defaultdict(list)
+            for uttid in utt_list:
+                utt2lang_list.append(f"{uttid} {utt2lang[uttid]}")
+                wavscp_list.append(f"{uttid} {utt2wav[uttid]}")
+                utt2spk_list.append(f"{uttid} {utt2spk[uttid]}")
+                text_list.append(f"{uttid} {utt2text[uttid]}")
+                d_spk2utt[utt2spk[uttid]].append(uttid)
+            spk2utt_list = [f"{spk} {' '.join(utt_list)}" for spk, utt_list in d_spk2utt.items()]
+
+            destination = self.dst_dir / self.data_type / setname
+            os.makedirs(destination, exist_ok=True)
+            with open(destination / "utt2lang", "w") as fw:
+                fw.write("\n".join(utt2lang_list))
+            with open(destination / "utt2spk", "w") as fw:
+                fw.write("\n".join(utt2spk_list))
+            with open(destination / "spk2utt", "w") as fw:
+                fw.write("\n".join(spk2utt_list))
+            with open(destination / "text", "w") as fw:
+                fw.write("\n".join(text_list))
+            with open(destination / "wav.scp", "w") as fw:
+                fw.write("\n".join(wavscp_list))
+
 class DataProcessor:
     def __init__(
         self,
@@ -352,6 +491,7 @@ def main():
     parser.add_argument("--use_mailabs", action="store_true")
     parser.add_argument("--use_fleurs", action="store_true")
     parser.add_argument("--use_css10", action="store_true")
+    parser.add_argument("--use_other_tts_data", action="store_true")
     parser.add_argument("--mos_filtering", action="store_true")
     parser.add_argument("--byte_len_filtering", action="store_true")
     parser.add_argument("--lang_family", required=False, default=None, type=str)
@@ -431,6 +571,17 @@ def main():
             args.n_train_utt,
             args.override_spk_set).process()
         data_types.append("css10")
+
+    if args.use_other_tts_data:
+        print("Processing Other TTS Data ...")
+        tsv_path = args.db_dir / f"other_tts_data{suffix}.tsv"
+        DataProcessorOther(
+            "other_tts_data",
+            tsv_path,
+            args.token_type,
+            args.lang_set,
+            args.byte_len_filtering).process()
+        data_types.append("other_tts_data")
     
     assert len(data_types) > 0, "No data type is specified."
 

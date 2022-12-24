@@ -22,6 +22,7 @@ token_type=byte
 use_css10=false
 use_fleurs=false
 use_mailabs=false
+use_other_tts_data=false
 mos_filtering=true
 byte_len_filtering=true
 lang_set=null
@@ -43,6 +44,9 @@ if [ ${use_fleurs} = true ]; then
 fi
 if [ ${use_mailabs} = true ]; then
     opts_data+=" --use_mailabs"
+fi
+if [ ${use_other_tts_data} = true ]; then
+    opts_data+=" --use_other_tts_data"
 fi
 if [ ${mos_filtering} = true ]; then
     opts_data+=" --mos_filtering"

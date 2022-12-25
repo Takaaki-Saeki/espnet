@@ -307,7 +307,7 @@ class Encoder(torch.nn.Module):
             raise NotImplementedError("Support only linear or conv1d.")
         return positionwise_layer, positionwise_layer_args
 
-    def forward(self, xs, masks):
+    def forward(self, xs, masks, out_token_emb=False):
         """Encode input sequence.
 
         Args:
@@ -329,6 +329,9 @@ class Encoder(torch.nn.Module):
         
         if self.adapter is not None:
             xs = self.adapter(xs)
+        
+        if out_token_emb:
+            token_emb = xs.clone()
 
         if self.intermediate_layers is None:
             xs, masks = self.encoders(xs, masks)
@@ -356,6 +359,8 @@ class Encoder(torch.nn.Module):
 
         if self.intermediate_layers is not None:
             return xs, masks, intermediate_outputs
+        if out_token_emb:
+            return xs, masks, token_emb
         return xs, masks
 
     def forward_one_step(self, xs, masks, cache=None):

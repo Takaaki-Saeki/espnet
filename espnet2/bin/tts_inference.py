@@ -418,6 +418,9 @@ def inference(
     (output_dir / "probs").mkdir(parents=True, exist_ok=True)
     (output_dir / "durations").mkdir(parents=True, exist_ok=True)
     (output_dir / "focus_rates").mkdir(parents=True, exist_ok=True)
+    (output_dir / "token_emb").mkdir(parents=True, exist_ok=True)
+    (output_dir / "enc_out").mkdir(parents=True, exist_ok=True)
+    (output_dir / "lid_emb").mkdir(parents=True, exist_ok=True)
 
     # Lazy load to avoid the backend error
     import matplotlib
@@ -551,6 +554,21 @@ def inference(
                     text2speech.fs,
                     "PCM_16",
                 )
+            
+            if output_dict.get("token_emb") is not None:
+                np.save(
+                    f"{output_dir}/token_emb/{key}.npy",
+                    output_dict["token_emb"].cpu().numpy())
+            
+            if output_dict.get("enc_out") is not None:
+                np.save(
+                    f"{output_dir}/enc_out/{key}.npy",
+                    output_dict["enc_out"].cpu().numpy())
+            
+            if output_dict.get("lid_emb") is not None:
+                np.save(
+                    f"{output_dir}/lid_emb/{key}.npy",
+                    output_dict["lid_emb"].cpu().numpy())
 
     # remove files if those are not included in output dict
     if output_dict.get("feat_gen") is None:
@@ -567,6 +585,12 @@ def inference(
         shutil.rmtree(output_dir / "probs")
     if output_dict.get("wav") is None:
         shutil.rmtree(output_dir / "wav")
+    if output_dict.get("token_emb") is None:
+        shutil.rmtree(output_dir / "token_emb")
+    if output_dict.get("enc_out") is None:
+        shutil.rmtree(output_dir / "enc_out")
+    if output_dict.get("lid_emb") is None:
+        shutil.rmtree(output_dir / "lid_emb")
 
 
 def get_parser():

@@ -1044,11 +1044,15 @@ class Transformer(AbsTTS):
         xs = x.unsqueeze(0)
         if self.lang_family_encoding:
             hs, _ = self._multiple_encoding(xs, None, lids)
+            # TODO(tsaeki): Output token embedding from multiple encoding
+            token_emb = None
         elif self.use_encoder_w_lid:
             lid_embs = self.lid_emb(lids.view(-1))
-            hs, _ = self.encoder(xs, None, lid_embs)
+            hs, _, token_emb = self.encoder(xs, None, lid_embs, out_token_emb=True)
         else:
-            hs, _ = self.encoder(xs, None)
+            hs, _, token_emb = self.encoder(xs, None, out_token_emb=True)
+        
+        enc_out = hs.clone()
 
         # integrate GST
         if self.use_gst:
@@ -1134,7 +1138,17 @@ class Transformer(AbsTTS):
         # concatenate attention weights -> (#layers, #heads, T_feats, T_text)
         att_ws = torch.stack(att_ws, dim=0)
 
-        return dict(feat_gen=outs, prob=probs, att_w=att_ws)
+        out_dict = dict(
+            feat_gen=outs,
+            prob=probs,
+            att_w=att_ws,
+            enc_out=enc_out
+        )
+        if token_emb is not None:
+            out_dict.update(token_emb=token_emb)
+        if (self.langs is not None) or self.use_encoder_w_lid:
+            out_dict.update(lid_emb=lid_embs)
+        return out_dict
 
     def _add_first_frame_and_remove_last_frame(self, ys: torch.Tensor) -> torch.Tensor:
         ys_in = torch.cat(
@@ -1292,7 +1306,7 @@ class Transformer(AbsTTS):
 
 
 class EncoderWithAdapter(Encoder):
-    def forward(self, xs, masks):
+    def forward(self, xs, masks, out_token_emb=False):
         """Encode input sequence.
 
         Args:
@@ -1317,6 +1331,9 @@ class EncoderWithAdapter(Encoder):
                 xs, masks = self.adapter(xs, masks)
             else:
                 xs = self.adapter(xs)
+        
+        if out_token_emb:
+            token_emb = xs.clone()
 
         if self.intermediate_layers is None:
             xs, masks = self.encoders(xs, masks)
@@ -1344,6 +1361,8 @@ class EncoderWithAdapter(Encoder):
 
         if self.intermediate_layers is not None:
             return xs, masks, intermediate_outputs
+        if out_token_emb:
+            return xs, masks, token_emb
         return xs, masks
 
     def forward_one_step(self, xs, masks, cache=None):
@@ -1382,7 +1401,7 @@ class EncoderWithAdapter(Encoder):
 
 
 class EncoderWithLid(Encoder):
-    def forward(self, xs, masks, lang_emb=None):
+    def forward(self, xs, masks, lang_emb=None, out_token_emb=False):
         """Encode input sequence.
         Args:
             xs (torch.Tensor): Input tensor (#batch, time, idim).
@@ -1411,6 +1430,9 @@ class EncoderWithLid(Encoder):
             else:
                 xs = self.adapter(xs)
 
+        if out_token_emb:
+            token_emb = xs.clone()
+
         if self.intermediate_layers is None:
             xs, masks = self.encoders(xs, masks)
         else:
@@ -1437,6 +1459,8 @@ class EncoderWithLid(Encoder):
 
         if self.intermediate_layers is not None:
             return xs, masks, intermediate_outputs
+        if out_token_emb:
+            return xs, masks, token_emb
         return xs, masks
 
     def forward_one_step(self, xs, masks, cache=None, lang_emb=None):

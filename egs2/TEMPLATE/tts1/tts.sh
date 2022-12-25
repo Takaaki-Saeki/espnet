@@ -66,6 +66,7 @@ f0min=80  # Maximum f0 for pitch extraction.
 f0max=400 # Minimum f0 for pitch extraction.
 lang2lid_override=null # Whether to override lang2lid.
 token_list_override=null # Whether to override token_list.
+spk_override=null # Whether to override spk.
 
 # X-Vector related
 use_xvector=false   # Whether to use x-vector.
@@ -173,6 +174,7 @@ Options:
     --sos_eos          # sos and eos symbole (default="${sos_eos}").
     --lang2lid_override # Whether to override lang2lid (default="${lang2lid_override}").
     --token_list_override # Whether to override token_list (default="${token_list_override}").
+    --spk_override    # Whether to override spk2utt and utt2spk (default="${spk_override}").
 
     # Training related
     --train_config  # Config for training (default="${train_config}").
@@ -604,6 +606,11 @@ if ! "${skip_data_prep}"; then
         log "Overwrite the token_list with ${token_list_override}"
         rm -rf "${token_list}"
         cp "${token_list_override}" "${token_list}"
+    fi
+
+    if [ ${spk_override} != null ]; then
+        log "Overwrite the spk with ${spk_override}"
+        python3 local/override_xvector.py --spk_override ${spk_override}
     fi
 else
     log "Skip the stages for data preparation"
@@ -1157,6 +1164,27 @@ if ! "${skip_eval}"; then
                 for i in $(seq "${_nj}"); do
                     mv -u "${_logdir}/output.${i}"/probs/*.png "${_dir}"/probs
                     rm -rf "${_logdir}/output.${i}"/probs
+                done
+            fi
+            if [ -e "${_logdir}/output.${_nj}/token_emb" ]; then
+                mkdir -p "${_dir}"/token_emb
+                for i in $(seq "${_nj}"); do
+                    mv -u "${_logdir}/output.${i}"/token_emb/*.npy "${_dir}"/token_emb
+                    rm -rf "${_logdir}/output.${i}"/token_emb
+                done
+            fi
+            if [ -e "${_logdir}/output.${_nj}/enc_out" ]; then
+                mkdir -p "${_dir}"/enc_out
+                for i in $(seq "${_nj}"); do
+                    mv -u "${_logdir}/output.${i}"/enc_out/*.npy "${_dir}"/enc_out
+                    rm -rf "${_logdir}/output.${i}"/enc_out
+                done
+            fi
+            if [ -e "${_logdir}/output.${_nj}/lid_emb" ]; then
+                mkdir -p "${_dir}"/lid_emb
+                for i in $(seq "${_nj}"); do
+                    mv -u "${_logdir}/output.${i}"/lid_emb/*.npy "${_dir}"/lid_emb
+                    rm -rf "${_logdir}/output.${i}"/lid_emb
                 done
             fi
         done

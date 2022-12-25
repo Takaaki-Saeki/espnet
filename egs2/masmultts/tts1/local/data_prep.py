@@ -410,7 +410,10 @@ class DataProcessor:
                 if self.override_spk_set is not None:
                     if lang in self.override_spk_set:
                         spk = self.override_spk_set[lang]
-                        uttid = f"{spk}_{uttid}"
+                        uttid_org = uttid
+                        uttid = f"{spk}_{uttid_org}"
+                        if uttid_org in self.byte_len_filtered_utt:
+                            self.byte_len_filtered_utt.add(uttid)
                 if self.spks_30min is not None:
                     if spk in self.spks_30min:
                         self.spk30min_filtered_utt.add(uttid)

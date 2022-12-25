@@ -77,7 +77,7 @@ max_epoch: 200             # number of epochs
 grad_clip: 1.0              # gradient clipping norm
 # grad_clip: 1.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
-accum_grad: 6               # gradient accumulation
+accum_grad: 4               # gradient accumulation
 # batch_bins: 9000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
 batch_bins: 400000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
 batch_type: numel           # how to make batch

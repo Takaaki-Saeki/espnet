@@ -25,9 +25,9 @@ do_trimming=false
 lang_family=null
 spk_set=null
 n_train_utt=null
-override_spk_set=null
 lang2lid_override=null
 token_list_override="local/token_list_20_${token_type}.txt"
+spk_override=null
 #########################################################
 
 local_data_opts=""
@@ -44,7 +44,6 @@ local_data_opts+=" --lang_family ${lang_family}"
 local_data_opts+=" --do_trimming ${do_trimming}"
 local_data_opts+=" --spk_set ${spk_set}"
 local_data_opts+=" --n_train_utt ${n_train_utt}"
-local_data_opts+=" --override_spk_set ${override_spk_set}"
 
 opts=
 if [ "${fs}" -eq 22050 ]; then
@@ -59,6 +58,9 @@ if [ ${lang2lid_override} != null ]; then
 fi
 if [ ${token_list_override} != null ]; then
     opts+="--token_list_override ${token_list_override} "
+fi
+if [ ${spk_override} != null ]; then
+    opts+="--spk_override ${spk_override} "
 fi
 
 lang=noinfo

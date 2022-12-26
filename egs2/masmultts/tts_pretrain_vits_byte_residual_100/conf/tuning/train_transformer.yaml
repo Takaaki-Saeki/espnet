@@ -21,7 +21,7 @@ tts_pretrain_conf:                  # keyword arguments for the selected model
     text_encoder_conformer_kernel_size: -1
     use_macaron_style_in_text_encoder: true
     use_conformer_conv_in_text_encoder: false
-    langs: 21                        # number of languages
+    langs: 104                        # number of languages
     adapter_type: "residual"         # type of adapter
 
 ##########################################################

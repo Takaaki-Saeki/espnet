@@ -1,13 +1,7 @@
-fr_fr
-es_419
-de_de
-en_uk
-en_us
-ru_ru
-it_it
 nl_nl
-uk_ua
-pl_pl
 fi_fi
-hu_hu
+fr_fr
+de_de
 el_gr
+hu_hu
+ru_ru

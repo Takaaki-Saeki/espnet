@@ -24,5 +24,6 @@ ta_in
 te_in
 xh_za
 yo_ng
-es_419
 en_us
+en_uk
+es_419

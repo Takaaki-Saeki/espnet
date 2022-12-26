@@ -1,0 +1,62 @@
+# This configuration is for ESPnet2 to pretrain Transformer-TTS.
+
+##########################################################
+#           TTS Pretraining MODEL SETTING                #
+##########################################################
+tts_pretrain: text_encoder          # model architecture
+tts_pretrain_conf:                  # keyword arguments for the selected model
+    hidden_channels: 192
+    text_encoder_attention_heads: 2
+    text_encoder_ffn_expand: 4
+    text_encoder_blocks: 6
+    text_encoder_positionwise_layer_type: "conv1d"
+    text_encoder_positionwise_conv_kernel_size: 3
+    text_encoder_positional_encoding_layer_type: "rel_pos"
+    text_encoder_self_attention_layer_type: "rel_selfattn"
+    text_encoder_activation_type: "swish"
+    text_encoder_normalize_before: true
+    text_encoder_dropout_rate: 0.1
+    text_encoder_positional_dropout_rate: 0.0
+    text_encoder_attention_dropout_rate: 0.1
+    text_encoder_conformer_kernel_size: -1
+    use_macaron_style_in_text_encoder: true
+    use_conformer_conv_in_text_encoder: false
+    langs: 21                        # number of languages
+    adapter_type: "residual"         # type of adapter
+
+##########################################################
+#            OPTIMIZER & SCHEDULER SETTING               #
+##########################################################
+optim: adam             # optimizer type
+optim_conf:             # keyword arguments for selected optimizer
+    lr: 1.0             # learning rate
+scheduler: noamlr       # scheduler type
+scheduler_conf:         # keyword arguments for selected scheduler
+    model_size: 192     # model size, a.k.a., attention dimenstion
+    warmup_steps: 10000  # the number of warmup steps
+
+##########################################################
+#                OTHER TRAINING SETTING                  #
+##########################################################
+# num_iters_per_epoch: 4000   # number of iterations per epoch
+max_epoch: 100              # number of epochs
+grad_clip: 1.0              # gradient clipping norm
+grad_noise: false           # whether to use gradient noise injection
+accum_grad: 2               # gradient accumulation
+batch_size: 32              # batch bins (for feats_type=raw, *= n_shift / n_mels)
+batch_type: unsorted        # how to make batch
+sort_in_batch: descending   # how to sort data in making batch
+sort_batch: descending      # how to sort created batches
+num_workers: 1              # number of workers of data loader
+train_dtype: float32        # dtype in training
+log_interval: null          # log interval in iterations
+keep_nbest_models: 5        # number of models to keep
+num_att_plot: 0             # number of attention figures to be saved in every check
+seed: 0                     # random seed number
+best_model_criterion:
+-   - valid
+    - loss
+    - min
+-   - train
+    - loss
+    - min

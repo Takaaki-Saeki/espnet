@@ -24,3 +24,5 @@ ta_in
 te_in
 xh_za
 yo_ng
+en_us
+en_uk

@@ -58,8 +58,9 @@ tts_conf:                  # keyword arguments for the selected model
     guided_attn_loss_sigma: 0.4                      # sigma in guided attention loss
     guided_attn_loss_lambda: 10.0                    # lambda in guided attention loss
     langs: 104
-    lang_family_encoding: False
-    num_lang_family: 7
+    use_adapter: True
+    adapter_type: "residual"                         # type of adapter
+    use_encoder_w_lid: True
 
 ##########################################################
 #            OPTIMIZER & SCHEDULER SETTING               #
@@ -81,8 +82,8 @@ grad_clip: 2.0              # gradient clipping norm
 # grad_clip: 1.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
 accum_grad: 4               # gradient accumulation
-# batch_bins: 9000000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
-batch_bins: 200000         # batch bins (for feats_type=raw, *= n_shift / n_mels)
+# batch_bins: 9000000       # batch bins (for feats_type=raw, *= n_shift / n_mels)
+batch_bins: 200000          # batch bins (for feats_type=raw, *= n_shift / n_mels)
 batch_type: numel           # how to make batch
 sort_in_batch: descending   # how to sort data in making batch
 sort_batch: descending      # how to sort created batches

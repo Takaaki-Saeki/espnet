@@ -187,7 +187,7 @@ cudnn_deterministic: false # setting to false accelerates the training speed but
 cudnn_benchmark: false     # setting to true might acdelerate the training speed but sometimes decrease it
                            # therefore, we set to false as a default (recommend trying both cases)
 freeze_param: [
-"tts.generator.text_encoder.lang_emb",
+"tts.generator.text_encoder.lang_emb"
 ]
 init_param: [
 "../tts_pretrain_vits_byte_residual/exp/tts_train_byte/2epoch.pth:tts_pretrain.generator.text_encoder:tts.generator.text_encoder"

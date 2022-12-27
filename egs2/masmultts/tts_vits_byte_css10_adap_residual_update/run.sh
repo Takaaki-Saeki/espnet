@@ -10,22 +10,22 @@ n_fft=1024
 n_shift=256
 
 ################# Configs to be set #####################
-token_type=phn           # byte, tphn, phn, bphn
+token_type=byte           # byte, tphn, phn, bphn
 use_mailabs=false
 use_css10=true
 use_fleurs=false
-use_lid=false
+use_lid=true
 use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
-lang_set="lang_set_decode.txt"
+lang_set="lang_set.txt"
 holdout_lang_set=null
 do_trimming=false
 lang_family=null
 spk_set=null
 n_train_utt=null
-lang2lid_override=null
-token_list_override=null
+lang2lid_override="local/lang2lid_override_20"
+token_list_override="local/token_list_20_${token_type}.txt"
 spk_override=null
 #########################################################
 

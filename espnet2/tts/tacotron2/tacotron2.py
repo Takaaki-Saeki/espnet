@@ -222,6 +222,9 @@ class Tacotron2(AbsTTS):
             self.projection = torch.nn.Linear(self.spk_embed_dim, eunits)
         else:
             raise ValueError(f"{spk_embed_integration_type} is not supported.")
+        
+        # Disabling lang embed dim for Tacotron2
+        self.lang_embed_dim = None
 
         if atype == "location":
             att = AttLoc(dec_idim, dunits, adim, aconv_chans, aconv_filts)

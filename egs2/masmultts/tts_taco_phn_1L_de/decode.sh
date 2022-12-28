@@ -25,7 +25,7 @@ lang_family=null
 spk_set=null
 n_train_utt=null
 lang2lid_override=null
-token_list_override="local/token_list_20_${token_type}.txt"
+token_list_override=null
 spk_override=null
 #########################################################
 
@@ -102,7 +102,7 @@ test_sets=test
     --g2p "${g2p}" \
     --train_config "${train_config}" \
     --inference_config "${inference_config}" \
-    --inference_model valid.loss.best.pth \
+    --inference_model train.loss.best.pth \
     --min_wav_duration 0.1 \
     --max_wav_duration 15 \
     --train_set "${train_set}" \

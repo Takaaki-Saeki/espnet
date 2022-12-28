@@ -113,6 +113,9 @@ class VITS(AbsGANTTS):
             "stochastic_duration_predictor_dropout_rate": 0.5,
             "stochastic_duration_predictor_flows": 4,
             "stochastic_duration_predictor_dds_conv_layers": 3,
+            "use_adapter": False,
+            "adapter_type": "residual",
+            "use_encoder_w_lid": False
         },
         # discriminator related
         discriminator_type: str = "hifigan_multi_scale_multi_period_discriminator",

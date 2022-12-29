@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 import os
 import re
-import string
+import random
 from collections import defaultdict
 import tqdm
 import unicodedata
@@ -86,7 +86,8 @@ class DataProcessorParaCrawl:
         db_dir,
         token_type="byte",
         lang_set=None,
-        byte_len_filtering=False
+        byte_len_filtering=False,
+        few_sampling_langs=None
     ):
         self.dst_dir = pathlib.Path("data")
         self.token_type = token_type
@@ -97,6 +98,11 @@ class DataProcessorParaCrawl:
         self.db_dir = db_dir / "paracrawl_clean_text"
         self.data_type = "paracrawl"
         self.seed = 0
+        if few_sampling_langs is not None:
+            with open(few_sampling_langs, "r") as fr:
+                self.few_sampling_langs = [line.strip() for line in fr]
+        else:
+            self.few_sampling_langs = None
 
         self.paracrawl_langs = list(langtable_paracrawl().keys())
         all_langs = [langtable_paracrawl()[lang] for lang in self.paracrawl_langs]
@@ -181,7 +187,12 @@ class DataProcessorParaCrawl:
             np.random.seed(self.seed)
             rand_idx = np.random.permutation(len(lang2utt[lang]))
             train_idx = rand_idx[self.n_dev+self.n_test :]
-            uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
+            train_set_all = [lang2utt[lang][idx] for idx in train_idx]
+            if (self.few_sampling_langs is not None) and (lang in self.few_sampling_langs):
+                train_set_sampled = random.sample(train_set_all, int(len(train_set_all)*0.1))
+                uttids_all["train"] += train_set_sampled
+            else:
+                uttids_all["train"] += train_set_all
             dev_idx = rand_idx[: self.n_dev]
             uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
@@ -211,7 +222,8 @@ class DataProcessorCV:
         db_dir,
         token_type="byte",
         lang_set=None,
-        byte_len_filtering=False
+        byte_len_filtering=False,
+        few_sampling_langs=None
     ):
         self.dst_dir = pathlib.Path("data")
         self.token_type = token_type
@@ -222,6 +234,11 @@ class DataProcessorCV:
         self.db_dir = db_dir / "cv_text"
         self.data_type = "cv"
         self.seed = 0
+        if few_sampling_langs is not None:
+            with open(few_sampling_langs, "r") as fr:
+                self.few_sampling_langs = [line.strip() for line in fr]
+        else:
+            self.few_sampling_langs = None
 
         self.cv_langs = list(langtable_cv().keys())
         all_langs = [langtable_cv()[lang] for lang in self.cv_langs]
@@ -306,7 +323,12 @@ class DataProcessorCV:
             np.random.seed(self.seed)
             rand_idx = np.random.permutation(len(lang2utt[lang]))
             train_idx = rand_idx[self.n_dev+self.n_test :]
-            uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
+            train_set_all = [lang2utt[lang][idx] for idx in train_idx]
+            if (self.few_sampling_langs is not None) and (lang in self.few_sampling_langs):
+                train_set_sampled = random.sample(train_set_all, int(len(train_set_all)*0.1))
+                uttids_all["train"] += train_set_sampled
+            else:
+                uttids_all["train"] += train_set_all
             dev_idx = rand_idx[: self.n_dev]
             uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
@@ -336,7 +358,8 @@ class DataProcessorVoxp:
         db_dir,
         token_type="byte",
         lang_set=None,
-        byte_len_filtering=False
+        byte_len_filtering=False,
+        few_sampling_langs=None
     ):
         self.dst_dir = pathlib.Path("data")
         self.token_type = token_type
@@ -347,6 +370,11 @@ class DataProcessorVoxp:
         self.db_dir = db_dir / "voxp_text" / "lm_data"
         self.data_type = "voxp"
         self.seed = 0
+        if few_sampling_langs is not None:
+            with open(few_sampling_langs, "r") as fr:
+                self.few_sampling_langs = [line.strip() for line in fr]
+        else:
+            self.few_sampling_langs = None
 
         self.voxp_langs = [
             "en", "de", "es", "et", "cs", "fi", "fr", "hr", "hu", "it", "lt", "nl", "pl", "ro", "sk", "sl"
@@ -433,7 +461,12 @@ class DataProcessorVoxp:
             np.random.seed(self.seed)
             rand_idx = np.random.permutation(len(lang2utt[lang]))
             train_idx = rand_idx[self.n_dev+self.n_test :]
-            uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
+            train_set_all = [lang2utt[lang][idx] for idx in train_idx]
+            if (self.few_sampling_langs is not None) and (lang in self.few_sampling_langs):
+                train_set_sampled = random.sample(train_set_all, int(len(train_set_all)*0.1))
+                uttids_all["train"] += train_set_sampled
+            else:
+                uttids_all["train"] += train_set_all
             dev_idx = rand_idx[: self.n_dev]
             uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
@@ -612,6 +645,7 @@ def main():
     parser.add_argument("--use_paracrawl", action="store_true")
     parser.add_argument("--byte_len_filtering", action="store_true")
     parser.add_argument("--lang_set", default=None, type=pathlib.Path)
+    parser.add_argument("--few_sampling_langs", default=None, type=pathlib.Path)
     args = parser.parse_args()
 
     data_types = []
@@ -660,7 +694,8 @@ def main():
             args.db_dir,
             args.token_type,
             args.lang_set,
-            args.byte_len_filtering
+            args.byte_len_filtering,
+            args.few_sampling_langs
         ).process()
         data_types.append("voxp")
 
@@ -670,7 +705,8 @@ def main():
             args.db_dir,
             args.token_type,
             args.lang_set,
-            args.byte_len_filtering
+            args.byte_len_filtering,
+            args.few_sampling_langs
         ).process()
         data_types.append("cv")
 
@@ -680,7 +716,8 @@ def main():
             args.db_dir,
             args.token_type,
             args.lang_set,
-            args.byte_len_filtering
+            args.byte_len_filtering,
+            args.few_sampling_langs
         ).process()
         data_types.append("paracrawl")
     

@@ -9,12 +9,13 @@ set -o pipefail
 token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
-use_fleurs=true
+use_fleurs=false
 use_voxp=true
+use_paracrawl=true
 use_lid=true
 use_lvector=false
 byte_len_filtering=true
-lang_set=null
+lang_set="lang_set.txt"
 few_sampling_langs=null
 #########################################################
 
@@ -24,6 +25,7 @@ local_data_opts+=" --use_mailabs ${use_mailabs}"
 local_data_opts+=" --use_css10 ${use_css10}"
 local_data_opts+=" --use_fleurs ${use_fleurs}"
 local_data_opts+=" --use_voxp ${use_voxp}"
+local_data_opts+=" --use_paracrawl ${use_paracrawl}"
 local_data_opts+=" --byte_len_filtering ${byte_len_filtering}"
 local_data_opts+=" --lang_set ${lang_set}"
 local_data_opts+=" --few_sampling_langs ${few_sampling_langs}"

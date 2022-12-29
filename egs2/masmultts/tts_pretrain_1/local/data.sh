@@ -22,6 +22,7 @@ use_cv=false
 use_paracrawl=false
 byte_len_filtering=true
 lang_set=null
+few_sampling_langs=null
 
 log "$0 $*"
 . utils/parse_options.sh
@@ -50,6 +51,9 @@ if [ ${byte_len_filtering} = true ]; then
 fi
 if [ ${lang_set} != null ]; then
     opts_data+=" --lang_set ${lang_set}"
+fi
+if [ ${few_sampling_langs} != null ]; then
+    opts_data+=" --few_sampling_langs ${few_sampling_langs}"
 fi
 
 if [ $# -ne 0 ]; then

@@ -72,6 +72,8 @@ cleaner=tacotron     # Text cleaner.
 g2p=g2p_en           # g2p method (needed if token_type=phn).
 lang=noinfo          # The language type of corpus.
 text_fold_length=150 # fold_length for text data.
+lang2lid_override=null # Whether to override lang2lid.
+token_list_override=null # Whether to override token_list.
 
 # Upload model related
 hf_repo=
@@ -130,6 +132,8 @@ Options:
     --g2p                # g2p method (default="${g2p}").
     --lang               # The language type of corpus (default="${lang}").
     --text_fold_length   # Fold length for text data (default="${text_fold_length}").
+    --lang2lid_override  # Whether to override lang2lid (default="${lang2lid_override}").
+    --token_list_override # Whether to override token_list (default="${token_list_override}").
 EOF
 )
 
@@ -240,6 +244,13 @@ if ! "${skip_data_prep}"; then
                     cut -f 2 -d " " "${data_feats}${_suf}/${dset}/utt2lang" | sort | uniq |
                         awk '{print $1 " " NR}' >>"${data_feats}${_suf}/${dset}/lang2lid"
                 fi
+                if [ "${lang2lid_override}" != null ]; then
+                    # Override lang2lid
+                    # NOTE(Takaaki-Saeki): Overriding language id for pretraining
+                    log "Overriding lang2lid with ${lang2lid_override}"
+                    rm -rf "${data_feats}${_suf}/${dset}/lang2lid"
+                    cp "${lang2lid_override}" "${data_feats}${_suf}/${dset}/lang2lid"
+                fi
                 # NOTE(kan-bayashi): We can reuse the same script for making utt2sid
                 pyscripts/utils/utt2spk_to_utt2sid.py \
                     "${data_feats}/org/${train_set}/lang2lid" \
@@ -279,6 +290,11 @@ if ! "${skip_data_prep}"; then
             --add_symbol "${blank}:0" \
             --add_symbol "${oov}:1" \
             --add_symbol "${sos_eos}:-1"
+    fi
+    if [ ${token_list_override} != null ]; then
+        log "Overwrite the token_list with ${token_list_override}"
+        rm -rf "${token_list}"
+        cp "${token_list_override}" "${token_list}"
     fi
 else
     log "Skip the stages for data preparation"

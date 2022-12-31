@@ -9,14 +9,14 @@ set -o pipefail
 token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
-use_fleurs=true
+use_fleurs=false
 use_voxp=true
 use_lid=true
 use_lvector=false
 byte_len_filtering=true
-lang_set=null
-lang2lid_override=null
-token_list_override=null
+lang_set="lang_set.txt"
+lang2lid_override="local/lang2lid_override_20"
+token_list_override="local/token_list_20_${token_type}.txt"
 few_sampling_langs=null
 #########################################################
 

@@ -1,0 +1,1 @@
+../tts_pretrain_1/cmd.sh

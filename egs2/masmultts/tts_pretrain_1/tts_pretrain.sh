@@ -266,7 +266,21 @@ if ! "${skip_data_prep}"; then
                     cp "${data_feats}/org/${dset}/utt2lid" "${data_feats}/${dset}/utt2lid"
                 fi
             done
-
+        else
+            # Only copying data
+            for dset in "${train_set}" "${valid_set}" ${test_sets}; do
+                if [ "${dset}" = "${train_set}" ] || [ "${dset}" = "${valid_set}" ]; then
+                    _suf="/org"
+                else
+                    _suf=""
+                fi
+                mkdir -p "${data_feats}${_suf}"
+                cp -r data/"${dset}" "${data_feats}${_suf}/"
+            done
+            for dset in "${train_set}" "${valid_set}"; do
+                # Copy data dir
+                cp -r "${data_feats}/org/${dset}" "${data_feats}/"
+            done
         fi
     fi
 

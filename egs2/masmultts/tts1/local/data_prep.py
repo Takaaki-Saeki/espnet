@@ -225,7 +225,8 @@ class DataProcessor:
         byte_len_filtering=False,
         spk_set=None,
         n_train_utt=None,
-        override_spk_set=None
+        override_spk_set=None,
+        selected_data_types=None
     ):
         self.dst_dir = pathlib.Path("data")
         self.data_type = data_type
@@ -242,6 +243,21 @@ class DataProcessor:
                 self.lang_set = [line.strip() for line in fr]
         else:
             self.lang_set = None
+        
+        # Only enabling for data_type == fleurs
+        if selected_data_types is not None:
+            print("Selecting languages not included in TTS Corpora ...")
+            if "mailabs" in selected_data_types:
+                self.lang_set = [lang for lang in self.lang_set if lang not in list(langtable_mailabs().values())]
+            if "css10" in selected_data_types:
+                self.lang_set = [lang for lang in self.lang_set if lang not in list(langtable_css10().values())]
+            if "other_tts_data" in selected_data_types:
+                candidate = [
+                    "af_za", "bn_in", "gl_es", "gu_in", "hi_in", "ja_jp",
+                    "jv_id", "km_kh", "kn_in", "ml_in", "my_mm", "ne_np",
+                    "pa_in", "ta_in", "te_in", "xh_za", "yo_ng"
+                ]
+                self.lang_set = [lang for lang in self.lang_set if lang not in candidate]
         
         if spk_set is not None:
             with open(spk_set, "r") as fr:
@@ -528,37 +544,6 @@ def main():
             args.override_spk_set).process()
         data_types.append("mailabs")
 
-    if args.use_fleurs:
-        print("Processing FLEURS ...")
-        tsv_path = args.db_dir / f"fleurs{suffix}.tsv"
-        DataProcessor(
-            "fleurs",
-            tsv_path,
-            args.token_type,
-            args.mos_filtering,
-            args.lang_set,
-            args.lang_family,
-            args.byte_len_filtering,
-            args.spk_set,
-            args.n_train_utt,
-            args.override_spk_set).process()
-        data_types.append("fleurs")
-    elif args.holdout_lang_set is not None:
-        print("Using only FLEURS holdout langs ...")
-        tsv_path = args.db_dir / f"fleurs{suffix}.tsv"
-        DataProcessor(
-            "fleurs",
-            tsv_path,
-            args.token_type,
-            args.mos_filtering,
-            args.holdout_lang_set,
-            args.lang_family,
-            args.byte_len_filtering,
-            args.spk_set,
-            args.n_train_utt,
-            args.override_spk_set).process()
-        data_types.append("fleurs")
-
     if args.use_css10:
         print("Processing CSS10 ...")
         tsv_path = args.db_dir / f"css10{suffix}.tsv"
@@ -585,6 +570,38 @@ def main():
             args.lang_set,
             args.byte_len_filtering).process()
         data_types.append("other_tts_data")
+
+    if args.use_fleurs:
+        print("Processing FLEURS ...")
+        tsv_path = args.db_dir / f"fleurs{suffix}.tsv"
+        DataProcessor(
+            "fleurs",
+            tsv_path,
+            args.token_type,
+            args.mos_filtering,
+            args.lang_set,
+            args.lang_family,
+            args.byte_len_filtering,
+            args.spk_set,
+            args.n_train_utt,
+            args.override_spk_set,
+            selected_data_types=data_types).process()
+        data_types.append("fleurs")
+    elif args.holdout_lang_set is not None:
+        print("Using only FLEURS holdout langs ...")
+        tsv_path = args.db_dir / f"fleurs{suffix}.tsv"
+        DataProcessor(
+            "fleurs",
+            tsv_path,
+            args.token_type,
+            args.mos_filtering,
+            args.holdout_lang_set,
+            args.lang_family,
+            args.byte_len_filtering,
+            args.spk_set,
+            args.n_train_utt,
+            args.override_spk_set).process()
+        data_types.append("fleurs")
     
     assert len(data_types) > 0, "No data type is specified."
 

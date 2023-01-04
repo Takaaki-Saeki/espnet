@@ -19,7 +19,7 @@ use_lid=true
 use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
-lang_set="lang_set_decode.txt"
+lang_set="lang_set.txt"
 holdout_lang_set=null
 do_trimming=false
 lang_family=null
@@ -85,7 +85,7 @@ fi
 train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
-train_set=dev
+train_set=train
 valid_set=dev
 test_sets=test
 

@@ -11,11 +11,10 @@ n_shift=256
 
 ################# Configs to be set #####################
 token_type=byte   # byte, tphn, phn, bphn
-use_mailabs=true
+use_mailabs=false
 use_css10=true
 use_fleurs=false
-use_other_tts_data=true
-use_lid=true
+use_lid=false
 use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
@@ -25,8 +24,8 @@ do_trimming=false
 lang_family=null
 spk_set=null
 n_train_utt=null
-lang2lid_override="local/lang2lid_override_100"
-token_list_override="local/token_list_100_${token_type}.txt"
+lang2lid_override="local/lang2lid_override_20"
+token_list_override="local/token_list_20_${token_type}.txt"
 spk_override=null
 #########################################################
 
@@ -35,7 +34,6 @@ local_data_opts+=" --token_type ${token_type}"
 local_data_opts+=" --use_mailabs ${use_mailabs}"
 local_data_opts+=" --use_css10 ${use_css10}"
 local_data_opts+=" --use_fleurs ${use_fleurs}"
-local_data_opts+=" --use_other_tts_data ${use_other_tts_data}"
 local_data_opts+=" --mos_filtering ${mos_filtering}"
 local_data_opts+=" --byte_len_filtering ${byte_len_filtering}"
 local_data_opts+=" --lang_set ${lang_set}"
@@ -85,7 +83,7 @@ fi
 train_config=conf/train.yaml
 inference_config=conf/decode.yaml
 
-train_set=dev
+train_set=train
 valid_set=dev
 test_sets=test
 

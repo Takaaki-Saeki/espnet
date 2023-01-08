@@ -1048,9 +1048,9 @@ class Transformer(AbsTTS):
             token_emb = None
         elif self.use_encoder_w_lid:
             lid_embs = self.lid_emb(lids.view(-1))
-            hs, _, token_emb = self.encoder(xs, None, lid_embs, out_token_emb=True)
+            hs, _, token_emb, enc_in = self.encoder(xs, None, lid_embs, out_token_emb=True)
         else:
-            hs, _, token_emb = self.encoder(xs, None, out_token_emb=True)
+            hs, _, token_emb, enc_in = self.encoder(xs, None, out_token_emb=True)
         
         enc_out = hs.clone()
 
@@ -1145,7 +1145,10 @@ class Transformer(AbsTTS):
             enc_out=enc_out
         )
         if token_emb is not None:
-            out_dict.update(token_emb=token_emb)
+            out_dict.update(
+                token_emb=token_emb,
+                enc_in=enc_in
+            )
         if (self.langs is not None) or self.use_encoder_w_lid:
             out_dict.update(lid_emb=lid_embs)
         return out_dict
@@ -1325,6 +1328,9 @@ class EncoderWithAdapter(Encoder):
             xs, masks = self.embed(xs, masks)
         else:
             xs = self.embed(xs)
+
+        if out_token_emb:
+            token_emb = xs.clone()
         
         if self.adapter is not None:
             if isinstance(self.adapter, TransformerAdapter):
@@ -1333,7 +1339,7 @@ class EncoderWithAdapter(Encoder):
                 xs = self.adapter(xs)
         
         if out_token_emb:
-            token_emb = xs.clone()
+            enc_in = xs.clone()
 
         if self.intermediate_layers is None:
             xs, masks = self.encoders(xs, masks)
@@ -1362,7 +1368,7 @@ class EncoderWithAdapter(Encoder):
         if self.intermediate_layers is not None:
             return xs, masks, intermediate_outputs
         if out_token_emb:
-            return xs, masks, token_emb
+            return xs, masks, token_emb, enc_in
         return xs, masks
 
     def forward_one_step(self, xs, masks, cache=None):
@@ -1418,6 +1424,9 @@ class EncoderWithLid(Encoder):
             xs, masks = self.embed(xs, masks)
         else:
             xs = self.embed(xs)
+
+        if out_token_emb:
+            token_emb = xs.clone()
         
         # Adding language embedding
         if lang_emb is not None:
@@ -1431,7 +1440,7 @@ class EncoderWithLid(Encoder):
                 xs = self.adapter(xs)
 
         if out_token_emb:
-            token_emb = xs.clone()
+            enc_in = xs.clone()
 
         if self.intermediate_layers is None:
             xs, masks = self.encoders(xs, masks)
@@ -1460,7 +1469,7 @@ class EncoderWithLid(Encoder):
         if self.intermediate_layers is not None:
             return xs, masks, intermediate_outputs
         if out_token_emb:
-            return xs, masks, token_emb
+            return xs, masks, token_emb, enc_in
         return xs, masks
 
     def forward_one_step(self, xs, masks, cache=None, lang_emb=None):

@@ -1180,6 +1180,13 @@ if ! "${skip_eval}"; then
                     rm -rf "${_logdir}/output.${i}"/enc_out
                 done
             fi
+            if [ -e "${_logdir}/output.${_nj}/enc_in" ]; then
+                mkdir -p "${_dir}"/enc_in
+                for i in $(seq "${_nj}"); do
+                    mv -u "${_logdir}/output.${i}"/enc_in/*.npy "${_dir}"/enc_in
+                    rm -rf "${_logdir}/output.${i}"/enc_in
+                done
+            fi
             if [ -e "${_logdir}/output.${_nj}/lid_emb" ]; then
                 mkdir -p "${_dir}"/lid_emb
                 for i in $(seq "${_nj}"); do

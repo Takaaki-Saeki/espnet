@@ -420,6 +420,7 @@ def inference(
     (output_dir / "focus_rates").mkdir(parents=True, exist_ok=True)
     (output_dir / "token_emb").mkdir(parents=True, exist_ok=True)
     (output_dir / "enc_out").mkdir(parents=True, exist_ok=True)
+    (output_dir / "enc_in").mkdir(parents=True, exist_ok=True)
     (output_dir / "lid_emb").mkdir(parents=True, exist_ok=True)
 
     # Lazy load to avoid the backend error
@@ -564,6 +565,11 @@ def inference(
                 np.save(
                     f"{output_dir}/enc_out/{key}.npy",
                     output_dict["enc_out"].cpu().numpy())
+
+            if output_dict.get("enc_in") is not None:
+                np.save(
+                    f"{output_dir}/enc_in/{key}.npy",
+                    output_dict["enc_in"].cpu().numpy())
             
             if output_dict.get("lid_emb") is not None:
                 np.save(
@@ -589,6 +595,8 @@ def inference(
         shutil.rmtree(output_dir / "token_emb")
     if output_dict.get("enc_out") is None:
         shutil.rmtree(output_dir / "enc_out")
+    if output_dict.get("enc_in") is None:
+        shutil.rmtree(output_dir / "enc_in")
     if output_dict.get("lid_emb") is None:
         shutil.rmtree(output_dir / "lid_emb")
 

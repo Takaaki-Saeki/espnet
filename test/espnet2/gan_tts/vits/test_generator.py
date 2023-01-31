@@ -19,6 +19,7 @@ def make_generator_args(**kwargs):
         spk_embed_dim=-1,
         global_channels=-1,
         segment_size=4,
+        text_encoder_type="conformer",
         text_encoder_attention_heads=2,
         text_encoder_ffn_expand=4,
         text_encoder_blocks=2,
@@ -74,6 +75,7 @@ def make_generator_args(**kwargs):
     "model_dict",
     [
         ({}),
+        ({"text_encoder_type": "e_branchformer"}),
         ({"text_encoder_positionwise_layer_type": "linear"}),
         ({"text_encoder_positionwise_layer_type": "conv1d-linear"}),
         ({"text_encoder_normalize_before": False}),

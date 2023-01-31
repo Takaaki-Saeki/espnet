@@ -21,6 +21,7 @@ def make_vits_generator_args(**kwargs):
             "spk_embed_dim": -1,
             "global_channels": -1,
             "segment_size": 4,
+            "text_encoder_type": "conformer",
             "text_encoder_attention_heads": 2,
             "text_encoder_ffn_expand": 2,
             "text_encoder_blocks": 2,

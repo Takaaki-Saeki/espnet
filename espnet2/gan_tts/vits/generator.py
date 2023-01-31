@@ -47,6 +47,7 @@ class VITSGenerator(torch.nn.Module):
         spk_embed_dim: Optional[int] = None,
         global_channels: int = -1,
         segment_size: int = 32,
+        text_encoder_type: str = "conformer",
         text_encoder_attention_heads: int = 2,
         text_encoder_ffn_expand: int = 4,
         text_encoder_blocks: int = 6,
@@ -101,6 +102,7 @@ class VITSGenerator(torch.nn.Module):
                 assume that spembs will be provided as the input.
             global_channels (int): Number of global conditioning channels.
             segment_size (int): Segment size for decoder.
+            text_encoder_type (str): Text encoder type.
             text_encoder_attention_heads (int): Number of heads in conformer block
                 of text encoder.
             text_encoder_ffn_expand (int): Expansion ratio of FFN in conformer block
@@ -170,6 +172,7 @@ class VITSGenerator(torch.nn.Module):
         super().__init__()
         self.segment_size = segment_size
         self.text_encoder = TextEncoder(
+            encoder_type=text_encoder_type,
             vocabs=vocabs,
             attention_dim=hidden_channels,
             attention_heads=text_encoder_attention_heads,

@@ -141,6 +141,7 @@ class EBranchformerEncoderLayer(torch.nn.Module):
             if pos_emb is not None:
                 x_att = self.attn(x1, x1, x1, pos_emb, mask)
             else:
+                print(self.attn)
                 x_att = self.attn(x1, x1, x1, mask)
 
         x1 = self.dropout(x_att)
@@ -293,9 +294,14 @@ class EBranchformerEncoder(AbsEncoder):
             )
         elif input_layer is None:
             if input_size == output_size:
-                self.embed = None
+                self.embed = torch.nn.Sequential(
+                    pos_enc_class(output_size, positional_dropout_rate)
+                )
             else:
-                self.embed = torch.nn.Linear(input_size, output_size)
+                self.embed = torch.nn.Sequential(
+                    torch.nn.Linear(input_size, output_size),
+                    pos_enc_class(output_size, positional_dropout_rate)
+                )
         else:
             raise ValueError("unknown input_layer: " + input_layer)
 

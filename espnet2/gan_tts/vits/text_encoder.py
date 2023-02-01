@@ -124,7 +124,7 @@ class TextEncoder(torch.nn.Module):
                 attention_layer_type=self_attention_layer_type,
                 pos_enc_layer_type=positional_encoding_layer_type,
                 rel_pos_type="legacy",
-                cgmlp_linear_units=linear_units,
+                cgmlp_linear_units=768,
                 cgmlp_conv_kernel=7,
                 use_linear_after_conv=False,
                 gate_activation="identity",
@@ -133,10 +133,10 @@ class TextEncoder(torch.nn.Module):
                 padding_idx=-1,
                 layer_drop_rate=0.0,
                 max_pos_emb_len=5000,
-                use_ffn=False,
-                macaron_ffn=False,
+                use_ffn=True,
+                macaron_ffn=True if macaron_style else False,
                 ffn_activation_type="swish",
-                positionwise_layer_type="linear",
+                positionwise_layer_type=positionwise_layer_type,
                 merge_conv_kernel=3)
         else:
             raise ValueError(f"{encoder_type} is not supported.")

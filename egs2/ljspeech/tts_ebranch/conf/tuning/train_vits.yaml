@@ -19,7 +19,7 @@ tts_conf:
         spks: -1
         global_channels: -1
         segment_size: 32
-        text_encoder_type: conformer
+        text_encoder_type: e_branchformer
         text_encoder_attention_heads: 2
         text_encoder_ffn_expand: 4
         text_encoder_blocks: 6
@@ -159,10 +159,11 @@ generator_first: false # whether to start updating generator first
 ##########################################################
 #                OTHER TRAINING SETTING                  #
 ##########################################################
-num_iters_per_epoch: 1000 # number of iterations per epoch
+# num_iters_per_epoch: 1000 # number of iterations per epoch
 max_epoch: 1000           # number of epochs
 accum_grad: 1             # gradient accumulation
-batch_bins: 5000000       # batch bins (feats_type=raw)
+# batch_bins: 5000000     # batch bins (feats_type=raw)
+batch_bins: 1000000        # batch bins (feats_type=raw)
 batch_type: numel         # how to make batch
 grad_clip: -1             # gradient clipping norm
 grad_noise: false         # whether to use gradient noise injection

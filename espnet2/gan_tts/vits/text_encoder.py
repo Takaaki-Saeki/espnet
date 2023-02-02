@@ -134,7 +134,7 @@ class TextEncoder(torch.nn.Module):
                 layer_drop_rate=0.0,
                 max_pos_emb_len=5000,
                 use_ffn=True,
-                macaron_ffn=True if macaron_style else False,
+                macaron_ffn=True if use_macaron_style else False,
                 ffn_activation_type="swish",
                 positionwise_layer_type=positionwise_layer_type,
                 merge_conv_kernel=3)

@@ -23,7 +23,7 @@ tts_conf:
         text_encoder_attention_heads: 2
         text_encoder_ffn_expand: 4
         text_encoder_blocks: 6
-        text_encoder_positionwise_layer_type: "conv1d"
+        text_encoder_positionwise_layer_type: "linear" # Originally conv1d but e-branchformer only supports linear
         text_encoder_positionwise_conv_kernel_size: 3
         text_encoder_positional_encoding_layer_type: "rel_pos"
         text_encoder_self_attention_layer_type: "rel_selfattn"

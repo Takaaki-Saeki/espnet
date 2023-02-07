@@ -19,6 +19,7 @@ use_fleurs=false
 use_mailabs=false
 use_voxp=false
 use_cv=false
+use_cc100=false
 use_paracrawl=false
 byte_len_filtering=true
 lang_set=null
@@ -45,6 +46,9 @@ if [ ${use_cv} = true ]; then
 fi
 if [ ${use_paracrawl} = true ]; then
     opts_data+=" --use_paracrawl"
+fi
+if [ ${use_cc100} = true ]; then
+    opts_data+=" --use_cc100"
 fi
 if [ ${byte_len_filtering} = true ]; then
     opts_data+=" --byte_len_filtering"

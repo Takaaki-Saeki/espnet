@@ -135,6 +135,7 @@ class Transformer(AbsTTS):
         lid_loss_lambda: float = 1.0,
         use_adapter: bool = False,
         adapter_type: str = "residual",
+        use_spk_adapter: bool = False,
         use_encoder_w_lid: bool = False,
     ):
         """Initialize Transformer module.
@@ -272,6 +273,12 @@ class Transformer(AbsTTS):
             ScaledPositionalEncoding if self.use_scaled_pos_enc else PositionalEncoding
         )
 
+        self.use_spk_adapter = use_spk_adapter
+        if use_spk_adapter:
+            self.spk_adapter = ResidualAdapter(input_dim=adim, hidden_dim=256)
+        
+        self.use_encoder_w_lid = use_encoder_w_lid
+
         if not lang_family_encoding:
             self.lang_family_encoding = lang_family_encoding
             # define transformer encoder
@@ -324,8 +331,7 @@ class Transformer(AbsTTS):
             elif langs is not None and langs > 1:
                 self.langs = langs
                 self.lid_emb = torch.nn.Embedding(langs, adim)
-            
-            self.use_encoder_w_lid = use_encoder_w_lid
+
             if use_encoder_w_lid:
                 encoder_cls = EncoderWithLid
             else:
@@ -867,6 +873,10 @@ class Transformer(AbsTTS):
         
         if self.lang_embed_dim is not None:
             hs = self._integrate_with_lang_embed(hs, lembs)
+        
+        # Using speaker adapter
+        if self.use_spk_adapter:
+            hs = self.spk_adapter(hs)
 
         # Calculating lid loss inside _forward() if not using mlm loss
         # If using mlm loss, lid loss is calculated in _mlm_forward()
@@ -1076,6 +1086,10 @@ class Transformer(AbsTTS):
         if self.lang_embed_dim is not None:
             lembs = lemb.unsqueeze(0)
             hs = self._integrate_with_lang_embed(hs, lembs)
+
+        # Using speaker adapter
+        if self.use_spk_adapter:
+            hs = self.spk_adapter(hs)
 
         # set limits of length
         maxlen = int(hs.size(1) * maxlenratio / self.reduction_factor)
@@ -1303,7 +1317,7 @@ class Transformer(AbsTTS):
 
         # mlm target (ignoring unmasked elements)
         mlm_target = xs.clone().masked_fill_(
-            ~mask_pos, self.ignore_idx
+            ~mask_pos, self.padding_idx
         )
         return xs_masked, mlm_target
 

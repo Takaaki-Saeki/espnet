@@ -77,6 +77,108 @@ def tsv():
         fw.write("\n".join(out_list))
 
 
+def tsv2():
+    """Run phoneme conversion."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--in_text", type=pathlib.Path, help="Input kaldi-style text.")
+    parser.add_argument("--data_type", type=str, choices=["mailabs", "css10", "fleurs"])
+    args = parser.parse_args()
+
+    phoneme_tokenizers = {}
+    if args.data_type == "mailabs":
+        data_name = "m_ailabs"
+        for lang in langtable_mailabs().keys():
+            lcode = langtable_mailabs()[lang]
+            lcode = g2p_langtable()[lcode]
+            phoneme_tokenizers[lcode] = PhonemeTokenizer(lcode)
+    elif args.data_type == "css10":
+        data_name = "css10"
+        for lang in langtable_css10().keys():
+            lcode = langtable_css10()[lang]
+            lcode = g2p_langtable()[lcode]
+            phoneme_tokenizers[lcode] = PhonemeTokenizer(lcode)
+    elif args.data_type == "fleurs":
+        data_name = "fleurs"
+        for lang in g2p_langtable().keys():
+            lcode = g2p_langtable()[lang]
+            phoneme_tokenizers[lcode] = PhonemeTokenizer(lcode)
+
+    in_list = []
+    with open(args.in_text, "r") as fr:
+        for line in fr:
+            in_list.append(line.strip())
+
+    ignore_list = set([
+        "hi_in_spk008_11633347711483585417"
+    ])
+    
+    out_lists = {
+        "byte": [],
+        "phn": [],
+        "bphn": []
+    }
+    for line in tqdm.tqdm(in_list):
+        line_list = line.strip().split("\t")
+        if len(line_list) < 5:
+            continue
+        lang = line_list[2]
+        if args.data_type == "mailabs":
+            lcode = langtable_mailabs()[lang]
+        elif args.data_type == "css10":
+            lcode = langtable_css10()[lang]
+        elif args.data_type == "fleurs":
+            lcode = lang
+        uttid = line_list[0]
+        if uttid in ignore_list:
+            continue
+        lcode = g2p_langtable()[lcode]
+        text = line_list[4]
+        tokenizer = phoneme_tokenizers[lcode]
+        phn_text = " ".join(tokenizer.text2tokens(text))
+        byte_text = " ".join([str(x) for x in list(text.encode("utf-8"))])
+        out_line_phn = [
+            line_list[0],
+            line_list[1],
+            line_list[2],
+            line_list[3],
+            phn_text
+        ]
+        out_line_phn_bphn = [
+            line_list[0]+"_phn",
+            line_list[1],
+            line_list[2],
+            line_list[3],
+            phn_text
+        ]
+        out_line_byte = [
+            line_list[0],
+            line_list[1],
+            line_list[2],
+            line_list[3],
+            byte_text
+        ]
+        out_line_byte_bphn = [
+            line_list[0]+"_byte",
+            line_list[1],
+            line_list[2],
+            line_list[3],
+            byte_text
+        ]
+        out_lists["byte"].append("\t".join(out_line_byte))
+        out_lists["phn"].append("\t".join(out_line_phn))
+        out_lists["bphn"].append("\t".join(out_line_byte_bphn))
+        out_lists["bphn"].append("\t".join(out_line_phn_bphn))
+    
+    out_paths = {}
+    out_paths["byte"] = args.in_text.parent / f"{data_name}_byte.tsv"
+    out_paths["phn"] = args.in_text.parent / f"{data_name}_phn.tsv"
+    out_paths["bphn"] = args.in_text.parent / f"{data_name}_bphn.tsv"
+    
+    for token in ["byte", "phn", "bphn"]:
+        with open(out_paths[token], "w") as fw:
+            fw.write("\n".join(out_lists[token]))
+
+
 def voxp():
     """Run phoneme conversion."""
     parser = argparse.ArgumentParser()
@@ -95,13 +197,17 @@ def voxp():
         print(f"Processing {lang} ...")
         text_path = args.db_dir / lang / "sentences.txt"
         os.makedirs(out_dir / lang, exist_ok=True)
-        out_path = out_dir / lang / "sentences_phn.txt"
-        if out_path.exists():
+        out_path_phn = out_dir / lang / "sentences_phn.txt"
+        out_path_byte = out_dir / lang / "sentences_byte.txt"
+        out_path_bphn = out_dir / lang / "sentences_bphn.txt"
+        if out_path_phn.exists():
             print(f"{lang} is already processed. Skipping.")
             continue
     
         in_list = []
-        out_list = []
+        out_list_phn = []
+        out_list_byte = []
+        out_list_bphn = []
         with open(text_path, "r") as fr:
             for line in fr:
                 in_list.append(line.strip())
@@ -115,12 +221,79 @@ def voxp():
             try:
                 tokenizer = phoneme_tokenizers[lcode]
                 phn_text = " ".join(tokenizer.text2tokens(text))
-                out_list.append(phn_text)
+                byte_text = " ".join([str(x) for x in list(text.encode("utf-8"))])
+                out_list_phn.append(phn_text)
+                out_list_byte.append(byte_text)
+                out_list_bphn.append(phn_text)
+                out_list_bphn.append(byte_text)
             except:
                 continue
         
-        with open(out_path, "w") as fw:
-            fw.write("\n".join(out_list))
+        with open(out_path_phn, "w") as fw:
+            fw.write("\n".join(out_list_phn))
+        with open(out_path_byte, "w") as fw:
+            fw.write("\n".join(out_list_byte))
+        with open(out_path_bphn, "w") as fw:
+            fw.write("\n".join(out_list_bphn))
+
+def cc100():
+    """Run phoneme conversion."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--db_dir", type=pathlib.Path, help="Input kaldi-style text.")
+    args = parser.parse_args()
+
+    out_dir = pathlib.Path("data")
+
+    phoneme_tokenizers = {}
+    langs = [
+        "af_za", "el_gr", "ru_ru", "ja_jp", "pl_pl","te_in", "gu_in",
+        "hi_in", "bn_in", "ta_in", "uk_ua", "yo_ng", "gl_es", "xh_za",
+        "km_kh", "my_mm", "pa_in", "jv_id", "ml_in", "ne_np"]
+    for lang in langs:
+        lcode = g2p_langtable()[lang]
+        phoneme_tokenizers[lcode] = PhonemeTokenizer(lcode)
+
+    for lang in langs:
+        print(f"Processing {lang} ...")
+        text_path = args.db_dir / f"{lang}.txt"
+        os.makedirs(out_dir / lang, exist_ok=True)
+        out_path_phn = out_dir / lang / "sentences_phn.txt"
+        out_path_byte = out_dir / lang / "sentences_byte.txt"
+        out_path_bphn = out_dir / lang / "sentences_bphn.txt"
+        if out_path_phn.exists():
+            print(f"{lang} is already processed. Skipping.")
+            continue
+    
+        in_list = []
+        out_list_phn = []
+        out_list_byte = []
+        out_list_bphn = []
+        with open(text_path, "r") as fr:
+            for line in fr:
+                in_list.append(line.strip())
+            
+        for line in tqdm.tqdm(in_list):
+            lcode = g2p_langtable()[lang]
+            text = basic_normalizer(line)
+            if len(text) == 0:
+                continue
+            try:
+                tokenizer = phoneme_tokenizers[lcode]
+                phn_text = " ".join(tokenizer.text2tokens(text))
+                byte_text = " ".join([str(x) for x in list(text.encode("utf-8"))])
+                out_list_phn.append(phn_text)
+                out_list_byte.append(byte_text)
+                out_list_bphn.append(phn_text)
+                out_list_bphn.append(byte_text)
+            except:
+                continue
+        
+        with open(out_path_phn, "w") as fw:
+            fw.write("\n".join(out_list_phn))
+        with open(out_path_byte, "w") as fw:
+            fw.write("\n".join(out_list_byte))
+        with open(out_path_bphn, "w") as fw:
+            fw.write("\n".join(out_list_bphn))
 
 def remove_symbols(s: str):
     return "".join(
@@ -200,8 +373,8 @@ class PhonemeTokenizer(AbsTokenizer):
         self.g2p = Phonemizer(
             language=lang,
             backend="espeak",
-            with_stress=True,
-            preserve_punctuation=True
+            with_stress=False,
+            preserve_punctuation=False
         )
         self.space_symbol = space_symbol
         if non_linguistic_symbols is None:
@@ -406,4 +579,6 @@ def g2p_langtable():
 
 
 if __name__ == "__main__":
-    voxp()
+    tsv2()
+    #cc100()
+    #voxp()

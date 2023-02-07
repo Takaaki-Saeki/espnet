@@ -6,12 +6,12 @@ from espnet2.tts.transformer import Transformer
 
 @pytest.mark.parametrize("eprenet_conv_layers", [0, 1])
 @pytest.mark.parametrize(
-    "use_adapter, adapter_type",
+    "use_adapter, adapter_type, use_spk_adapter",
     [
-        (False, "residual"),
-        (True, "residual"),
-        (True, "transformer"),
-        (True, "identity")
+        (False, "residual", False),
+        (True, "residual", False),
+        (True, "transformer", True),
+        (True, "identity", True)
     ]
 )
 @pytest.mark.parametrize("dprenet_layers", [0, 1])
@@ -43,6 +43,7 @@ def test_tranformer(
     eprenet_conv_layers,
     use_adapter,
     adapter_type,
+    use_spk_adapter,
     dprenet_layers,
     postnet_layers,
     reduction_factor,
@@ -111,7 +112,8 @@ def test_tranformer(
         use_encoder_w_lid=use_encoder_w_lid,
         lid_loss_level=lid_loss_level,
         use_adapter=use_adapter,
-        adapter_type=adapter_type
+        adapter_type=adapter_type,
+        use_spk_adapter=use_spk_adapter
     )
 
     inputs = dict(

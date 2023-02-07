@@ -14,6 +14,7 @@ token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
 use_fleurs=false
+use_other_tts_data=false
 use_lid=false
 use_lvector=false
 mos_filtering=false

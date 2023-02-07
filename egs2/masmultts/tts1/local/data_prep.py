@@ -2,8 +2,6 @@ import pathlib
 import argparse
 import numpy as np
 import os
-import re
-import string
 from collections import defaultdict
 
 def lang2group():
@@ -116,7 +114,11 @@ class DataProcessorOther:
                     text = line_list[4]
                     byte_len = len(list(text.encode("utf-8")))
                     if byte_len <= self.byte_len_thresh:
-                        self.byte_len_filtered_utt.add(uttid)
+                        if token_type == "bphn":
+                            self.byte_len_filtered_utt.add(uttid+"_phn")
+                            self.byte_len_filtered_utt.add(uttid+"_byte")
+                        else:
+                            self.byte_len_filtered_utt.add(uttid)
 
     def get_byte_len_filtered_uttids(self, utt_list):
         print(f"Filtering utterances with byte lengths: {self.byte_len_thresh}")
@@ -131,56 +133,84 @@ class DataProcessorOther:
 
         db_dir = self.tsv_path.parent
 
-        lang2utt = defaultdict(list)
         utt2spk = {}
         utt2lang = {}
         utt2wav = {}
         utt2text = {}
 
-        with open(self.tsv_path, "r") as fr:
-            for line in fr:
-                line_list = line.strip().split("\t")
-                if len(line_list) != 5:
-                    # Filtering out invalid data
-                    continue
-                if len(line_list[1].split(".")) != 2:
-                    # Filtering out invalid data
-                    continue
-                elif line_list[1].split(".")[-1] != "wav":
-                    # Filtering out invalid data
-                    continue
-                uttid = line_list[0]
-                wavpath = db_dir / self.data_name / line_list[1]
-                lang = line_list[2]
-                spk = line_list[3]
-                text = line_list[4]
-                if self.token_type == "byte":
-                    # Removing invalid characters
-                    text = self.remove_non_printable_chars(text)
-                    text = text.replace("\u3000", " ")
-                    text = text.lower()
-                if self.langtable is not None:
-                    lang = self.langtable[lang]
-                if self.lang_set is not None:
-                    if lang not in self.lang_set:
+        if self.token_type == "bphn":
+            tsvs = [
+                self.tsv_path.parent / f"{self.data_name}_byte.tsv",
+                self.tsv_path.parent / f"{self.data_name}_phn.tsv"
+            ]
+            suffixes = ["_byte", "_phn"]
+            lang2utt_list = []
+        else:
+            tsvs = [self.tsv_path]
+            suffixes = [""]
+            lang2utt_list = []
+        
+        for tsv_path, suffix in zip(tsvs, suffixes):
+            lang2utt = defaultdict(list)
+            with open(tsv_path, "r") as fr:
+                for line in fr:
+                    line_list = line.strip().split("\t")
+                    if len(line_list) != 5:
+                        # Filtering out invalid data
                         continue
-                lang2utt[lang].append(uttid)
-                utt2spk[uttid] = spk
-                utt2lang[uttid] = lang
-                utt2wav[uttid] = wavpath
-                utt2text[uttid] = text
+                    if len(line_list[1].split(".")) != 2:
+                        # Filtering out invalid data
+                        continue
+                    elif line_list[1].split(".")[-1] != "wav":
+                        # Filtering out invalid data
+                        continue
+                    uttid = line_list[0]+suffix
+                    wavpath = db_dir / self.data_name / line_list[1]
+                    lang = line_list[2]
+                    spk = line_list[3]
+                    text = line_list[4]
+                    if self.token_type == "byte":
+                        # Removing invalid characters
+                        text = self.remove_non_printable_chars(text)
+                        text = text.replace("\u3000", " ")
+                        text = text.lower()
+                    if self.langtable is not None:
+                        lang = self.langtable[lang]
+                    if self.lang_set is not None:
+                        if lang not in self.lang_set:
+                            continue
+                    lang2utt[lang].append(uttid)
+                    utt2spk[uttid] = spk
+                    utt2lang[uttid] = lang
+                    utt2wav[uttid] = wavpath
+                    utt2text[uttid] = text
+            lang2utt_list.append(lang2utt)
 
         uttids_all = {"train": [], "dev": [], "test": []}
 
-        for lang in lang2utt.keys():
-            np.random.seed(self.seed)
-            rand_idx = np.random.permutation(len(lang2utt[lang]))
-            train_idx = rand_idx[self.n_dev+self.n_test :]
-            uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
-            dev_idx = rand_idx[: self.n_dev]
-            uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
-            test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
-            uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
+        uttids_test = []
+        for l2u_idx, lang2utt in enumerate(lang2utt_list):
+            for lang in lang2utt.keys():
+                np.random.seed(self.seed)
+                rand_idx = np.random.permutation(len(lang2utt[lang]))
+                train_idx = rand_idx[self.n_dev+self.n_test :]
+                uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
+                dev_idx = rand_idx[: self.n_dev]
+                uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
+                if l2u_idx == 0:
+                    test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
+                    uttids_test += [lang2utt[lang][idx] for idx in test_idx]
+        
+        # Avoiding leak of test utterances
+        if self.token_type == "bphn":
+            print("Removing corresponding utterances from test data.")
+            for uttid_test in uttids_test:
+                uttid_test_phn = uttid_test.replace("_byte", "_phn")
+                if (uttid_test_phn not in uttids_all["train"]):
+                    uttids_all["test"].append(uttid_test)
+        else:
+            for uttid_test in uttids_test:
+                uttids_all["test"].append(uttid_test)
         
         for setname in ["train", "dev", "test"]:
             utt_list = uttids_all[setname]
@@ -339,7 +369,11 @@ class DataProcessor:
                     uttid = line_list[0]
                     mos_val = float(line_list[1])
                     if mos_val > self.mos_thresh:
-                        self.mos_filtered_utt.add(uttid)
+                        if token_type == "bphn":
+                            self.byte_len_filtered_utt.add(uttid+"_phn")
+                            self.byte_len_filtered_utt.add(uttid+"_byte")
+                        else:
+                            self.byte_len_filtered_utt.add(uttid)
         
         self.byte_len_filtered_utt = None
         if self.byte_len_filtering:
@@ -354,7 +388,11 @@ class DataProcessor:
                     text = line_list[4]
                     byte_len = len(list(text.encode("utf-8")))
                     if byte_len <= self.byte_len_thresh:
-                        self.byte_len_filtered_utt.add(uttid)
+                        if token_type == "bphn":
+                            self.byte_len_filtered_utt.add(uttid+"_phn")
+                            self.byte_len_filtered_utt.add(uttid+"_byte")
+                        else:
+                            self.byte_len_filtered_utt.add(uttid)
 
     def get_mos_filtered_uttids(self, utt_list):
         print(f"Filtering utterances with MOS value: {self.mos_thresh}")
@@ -381,7 +419,6 @@ class DataProcessor:
 
         db_dir = self.tsv_path.parent
 
-        lang2utt = defaultdict(list)
         utt2spk = {}
         utt2lang = {}
         utt2wav = {}
@@ -391,67 +428,96 @@ class DataProcessor:
         if self.spks_30min is not None:
             self.spk30min_filtered_utt = set()
 
-        with open(self.tsv_path, "r") as fr:
-            for line in fr:
-                line_list = line.strip().split("\t")
-                if len(line_list) != 5:
-                    # Filtering out invalid data
-                    continue
-                if len(line_list[1].split(".")) != 2:
-                    # Filtering out invalid data
-                    continue
-                elif line_list[1].split(".")[-1] != "wav":
-                    # Filtering out invalid data
-                    continue
-                uttid = line_list[0]
-                wavpath = db_dir / self.data_name / line_list[1]
-                lang = line_list[2]
-                spk = line_list[3]
-                text = line_list[4]
-                if self.token_type == "byte":
-                    # Removing invalid characters
-                    text = self.remove_non_printable_chars(text)
-                    text = text.replace("\u3000", " ")
-                    text = text.lower()
-                if self.langtable is not None:
-                    lang = self.langtable[lang]
-                if self.lang_set is not None:
-                    if lang not in self.lang_set:
+        if self.token_type == "bphn":
+            tsvs = [
+                self.tsv_path.parent / f"{self.data_name}_byte.tsv",
+                self.tsv_path.parent / f"{self.data_name}_phn.tsv"
+            ]
+            suffixes = ["_byte", "_phn"]
+            lang2utt_list = []
+        else:
+            tsvs = [self.tsv_path]
+            suffixes = [""]
+            lang2utt_list = []
+
+        for tsv_path, suffix in zip(tsvs, suffixes):
+            lang2utt = defaultdict(list)
+            with open(tsv_path, "r") as fr:
+                for line in fr:
+                    line_list = line.strip().split("\t")
+                    if len(line_list) != 5:
+                        # Filtering out invalid data
                         continue
-                if self.lang2group is not None:
-                    lang = self.lang2group[lang]
-                if self.spk_set is not None:
-                    if spk not in self.spk_set:
+                    if len(line_list[1].split(".")) != 2:
+                        # Filtering out invalid data
                         continue
-                if self.override_spk_set is not None:
-                    if lang in self.override_spk_set:
-                        spk = self.override_spk_set[lang]
-                        uttid_org = uttid
-                        uttid = f"{spk}_{uttid_org}"
-                        if uttid_org in self.byte_len_filtered_utt:
-                            self.byte_len_filtered_utt.add(uttid)
-                if self.spks_30min is not None:
-                    if spk in self.spks_30min:
-                        self.spk30min_filtered_utt.add(uttid)
-                lang2utt[lang].append(uttid)
-                utt2spk[uttid] = spk
-                utt2lang[uttid] = lang
-                utt2wav[uttid] = wavpath
-                utt2text[uttid] = text
+                    elif line_list[1].split(".")[-1] != "wav":
+                        # Filtering out invalid data
+                        continue
+                    uttid = line_list[0]+suffix
+                    wavpath = db_dir / self.data_name / line_list[1]
+                    lang = line_list[2]
+                    spk = line_list[3]
+                    text = line_list[4]
+                    if self.token_type == "byte":
+                        # Removing invalid characters
+                        text = self.remove_non_printable_chars(text)
+                        text = text.replace("\u3000", " ")
+                        text = text.lower()
+                    if self.langtable is not None:
+                        lang = self.langtable[lang]
+                    if self.lang_set is not None:
+                        if lang not in self.lang_set:
+                            continue
+                    if self.lang2group is not None:
+                        lang = self.lang2group[lang]
+                    if self.spk_set is not None:
+                        if spk not in self.spk_set:
+                            continue
+                    if self.override_spk_set is not None:
+                        if lang in self.override_spk_set:
+                            spk = self.override_spk_set[lang]
+                            uttid_org = uttid
+                            uttid = f"{spk}_{uttid_org}"
+                            if uttid_org in self.byte_len_filtered_utt:
+                                self.byte_len_filtered_utt.add(uttid)
+                    if self.spks_30min is not None:
+                        if spk in self.spks_30min:
+                            self.spk30min_filtered_utt.add(uttid)
+                    lang2utt[lang].append(uttid)
+                    utt2spk[uttid] = spk
+                    utt2lang[uttid] = lang
+                    utt2wav[uttid] = wavpath
+                    utt2text[uttid] = text
+            lang2utt_list.append(lang2utt)
 
         uttids_all = {"train": [], "dev": [], "test": []}
 
-        for lang in lang2utt.keys():
-            np.random.seed(self.seed)
-            rand_idx = np.random.permutation(len(lang2utt[lang]))
-            train_idx = rand_idx[self.n_dev+self.n_test :]
-            if self.n_train_utt is not None:
-                train_idx = train_idx[: self.n_train_utt]
-            uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
-            dev_idx = rand_idx[: self.n_dev]
-            uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
-            test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
-            uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
+        uttids_test = []
+        for l2u_idx, lang2utt in enumerate(lang2utt_list):
+            for lang in lang2utt.keys():
+                np.random.seed(self.seed)
+                rand_idx = np.random.permutation(len(lang2utt[lang]))
+                train_idx = rand_idx[self.n_dev+self.n_test :]
+                if self.n_train_utt is not None:
+                    train_idx = train_idx[: self.n_train_utt]
+                uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
+                dev_idx = rand_idx[: self.n_dev]
+                uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
+                if l2u_idx == 0:
+                    test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
+                    uttids_test += [lang2utt[lang][idx] for idx in test_idx]
+        
+        # Avoiding leak of test utterances
+        if self.token_type == "bphn":
+            print("Removing corresponding utterances from test data.")
+            for uttid_test in uttids_test:
+                uttid_test_phn = uttid_test.replace("_byte", "_phn")
+                if (uttid_test_phn not in uttids_all["train"]):
+                    uttids_all["test"].append(uttid_test)
+        else:
+            for uttid_test in uttids_test:
+                uttids_all["test"].append(uttid_test)
         
         for setname in ["train", "dev", "test"]:
             utt_list = uttids_all[setname]
@@ -506,7 +572,7 @@ def merge_data(data_types):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--db_dir",required=True, type=pathlib.Path)
-    parser.add_argument("--token_type", required=True, type=str, choices=["byte", "tphn", "phn", "bphn"])
+    parser.add_argument("--token_type", required=True, type=str, choices=["byte", "phn", "bphn"])
     parser.add_argument("--use_mailabs", action="store_true")
     parser.add_argument("--use_fleurs", action="store_true")
     parser.add_argument("--use_css10", action="store_true")

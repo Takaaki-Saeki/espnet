@@ -14,7 +14,7 @@ token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=false
 use_css10=true
 use_fleurs=false
-use_other_tts_data=false
+use_other_tts_data=true
 use_lid=true
 use_lvector=false
 mos_filtering=false
@@ -25,8 +25,8 @@ do_trimming=false
 lang_family=null
 spk_set=null
 n_train_utt=null
-lang2lid_override="local/lang2lid_override_14"
-token_list_override="local/token_list_14_${token_type}.txt"
+lang2lid_override="local/lang2lid_override_16"
+token_list_override="local/token_list_16_${token_type}.txt"
 spk_override=null
 #########################################################
 

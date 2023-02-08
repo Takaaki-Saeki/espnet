@@ -6,17 +6,17 @@ set -u
 set -o pipefail
 
 ################# Configs to be set #####################
-token_type=bphn   # byte, tphn, phn, bphn
+token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=false
-use_css10=true
+use_css10=false
 use_fleurs=false
-use_voxp=false
+use_voxp=true
 use_cc100=true
 use_lid=true
 use_lvector=false
 byte_len_filtering=true
 lang_set="lang_set.txt"
-lang2lid_override="local/lang2lid_override_14"
+lang2lid_override="local/lang2lid_override_16"
 token_list_override=null
 few_sampling_langs=null
 #########################################################

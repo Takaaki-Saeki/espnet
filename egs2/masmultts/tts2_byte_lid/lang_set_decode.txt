@@ -6,3 +6,9 @@ nl_nl
 fi_fi
 hu_hu
 el_gr
+bn_in
+gu_in
+hi_in
+pa_in
+te_in
+ml_in

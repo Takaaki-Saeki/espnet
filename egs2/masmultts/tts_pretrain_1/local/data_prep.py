@@ -201,6 +201,7 @@ class DataProcessorCC100:
                 if byte_len <= self.byte_len_thresh:
                     self.byte_len_filtered_utt.add(uttid)
             print("Removed {} utterances".format(cnt_removed))
+            del in_list
 
         uttids_all = {"train": [], "dev": [], "test": []}
 
@@ -226,19 +227,22 @@ class DataProcessorCC100:
             if setname == "train" and self.byte_len_filtering:
                 utt_list = self.get_byte_len_filtered_uttids(utt_list)
                 del self.byte_len_filtered_utt
-
-            utt2lang_list = []
-            text_list = []
-            for uttid in utt_list:
-                utt2lang_list.append(f"{uttid} {utt2lang[uttid]}")
-                text_list.append(f"{uttid} {utt2text[uttid]}")
-
+            
             destination = self.dst_dir / self.data_type / setname
             os.makedirs(destination, exist_ok=True)
             with open(destination / "utt2lang", "w") as fw:
-                fw.write("\n".join(utt2lang_list))
+                pass
             with open(destination / "text", "w") as fw:
-                fw.write("\n".join(text_list))
+                pass
+            for uttid in utt_list:
+                utt2lang_line = f"{uttid} {utt2lang[uttid]}"
+                text_line = f"{uttid} {utt2text[uttid]}"
+                with open(destination / "utt2lang", "a") as fw:
+                    fw.write(utt2lang_line)
+                    fw.write("\n")
+                with open(destination / "text", "a") as fw:
+                    fw.write(text_line)
+                    fw.write("\n")
 
 
 class DataProcessorParaCrawl:
@@ -351,6 +355,7 @@ class DataProcessorParaCrawl:
                 if byte_len <= self.byte_len_thresh:
                     self.byte_len_filtered_utt.add(uttid)
             print("Removed {} utterances".format(cnt_removed))
+            del in_list
 
         uttids_all = {"train": [], "dev": [], "test": []}
 
@@ -376,19 +381,22 @@ class DataProcessorParaCrawl:
             if setname == "train" and self.byte_len_filtering:
                 utt_list = self.get_byte_len_filtered_uttids(utt_list)
                 del self.byte_len_filtered_utt
-
-            utt2lang_list = []
-            text_list = []
-            for uttid in utt_list:
-                utt2lang_list.append(f"{uttid} {utt2lang[uttid]}")
-                text_list.append(f"{uttid} {utt2text[uttid]}")
-
+            
             destination = self.dst_dir / self.data_type / setname
             os.makedirs(destination, exist_ok=True)
             with open(destination / "utt2lang", "w") as fw:
-                fw.write("\n".join(utt2lang_list))
+                pass
             with open(destination / "text", "w") as fw:
-                fw.write("\n".join(text_list))
+                pass
+            for uttid in utt_list:
+                utt2lang_line = f"{uttid} {utt2lang[uttid]}"
+                text_line = f"{uttid} {utt2text[uttid]}"
+                with open(destination / "utt2lang", "a") as fw:
+                    fw.write(utt2lang_line)
+                    fw.write("\n")
+                with open(destination / "text", "a") as fw:
+                    fw.write(text_line)
+                    fw.write("\n")
 
 class DataProcessorCV:
     def __init__(
@@ -500,6 +508,7 @@ class DataProcessorCV:
                 if byte_len <= self.byte_len_thresh:
                     self.byte_len_filtered_utt.add(uttid)
             print("Removed {} utterances".format(cnt_removed))
+            del in_list
 
         uttids_all = {"train": [], "dev": [], "test": []}
 
@@ -525,19 +534,22 @@ class DataProcessorCV:
             if setname == "train" and self.byte_len_filtering:
                 utt_list = self.get_byte_len_filtered_uttids(utt_list)
                 del self.byte_len_filtered_utt
-
-            utt2lang_list = []
-            text_list = []
-            for uttid in utt_list:
-                utt2lang_list.append(f"{uttid} {utt2lang[uttid]}")
-                text_list.append(f"{uttid} {utt2text[uttid]}")
-
+            
             destination = self.dst_dir / self.data_type / setname
             os.makedirs(destination, exist_ok=True)
             with open(destination / "utt2lang", "w") as fw:
-                fw.write("\n".join(utt2lang_list))
+                pass
             with open(destination / "text", "w") as fw:
-                fw.write("\n".join(text_list))
+                pass
+            for uttid in utt_list:
+                utt2lang_line = f"{uttid} {utt2lang[uttid]}"
+                text_line = f"{uttid} {utt2text[uttid]}"
+                with open(destination / "utt2lang", "a") as fw:
+                    fw.write(utt2lang_line)
+                    fw.write("\n")
+                with open(destination / "text", "a") as fw:
+                    fw.write(text_line)
+                    fw.write("\n")
 
 class DataProcessorVoxp:
     def __init__(
@@ -651,6 +663,7 @@ class DataProcessorVoxp:
                 if byte_len <= self.byte_len_thresh:
                     self.byte_len_filtered_utt.add(uttid)
             print("Removed {} utterances".format(cnt_removed))
+            del in_list
 
         uttids_all = {"train": [], "dev": [], "test": []}
 
@@ -676,19 +689,22 @@ class DataProcessorVoxp:
             if setname == "train" and self.byte_len_filtering:
                 utt_list = self.get_byte_len_filtered_uttids(utt_list)
                 del self.byte_len_filtered_utt
-
-            utt2lang_list = []
-            text_list = []
-            for uttid in utt_list:
-                utt2lang_list.append(f"{uttid} {utt2lang[uttid]}")
-                text_list.append(f"{uttid} {utt2text[uttid]}")
-
+            
             destination = self.dst_dir / self.data_type / setname
             os.makedirs(destination, exist_ok=True)
             with open(destination / "utt2lang", "w") as fw:
-                fw.write("\n".join(utt2lang_list))
+                pass
             with open(destination / "text", "w") as fw:
-                fw.write("\n".join(text_list))
+                pass
+            for uttid in utt_list:
+                utt2lang_line = f"{uttid} {utt2lang[uttid]}"
+                text_line = f"{uttid} {utt2text[uttid]}"
+                with open(destination / "utt2lang", "a") as fw:
+                    fw.write(utt2lang_line)
+                    fw.write("\n")
+                with open(destination / "text", "a") as fw:
+                    fw.write(text_line)
+                    fw.write("\n")
 
 class DataProcessor:
     def __init__(

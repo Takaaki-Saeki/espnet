@@ -219,10 +219,13 @@ class DataProcessorCC100:
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
             uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
         
+        del lang2utt
+        
         for setname in ["train", "dev", "test"]:
             utt_list = uttids_all[setname]
             if setname == "train" and self.byte_len_filtering:
                 utt_list = self.get_byte_len_filtered_uttids(utt_list)
+                del self.byte_len_filtered_utt
 
             utt2lang_list = []
             text_list = []
@@ -366,10 +369,13 @@ class DataProcessorParaCrawl:
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
             uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
         
+        del lang2utt
+        
         for setname in ["train", "dev", "test"]:
             utt_list = uttids_all[setname]
             if setname == "train" and self.byte_len_filtering:
                 utt_list = self.get_byte_len_filtered_uttids(utt_list)
+                del self.byte_len_filtered_utt
 
             utt2lang_list = []
             text_list = []
@@ -512,10 +518,13 @@ class DataProcessorCV:
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
             uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
         
+        del lang2utt
+        
         for setname in ["train", "dev", "test"]:
             utt_list = uttids_all[setname]
             if setname == "train" and self.byte_len_filtering:
                 utt_list = self.get_byte_len_filtered_uttids(utt_list)
+                del self.byte_len_filtered_utt
 
             utt2lang_list = []
             text_list = []
@@ -660,10 +669,13 @@ class DataProcessorVoxp:
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
             uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
         
+        del lang2utt
+        
         for setname in ["train", "dev", "test"]:
             utt_list = uttids_all[setname]
             if setname == "train" and self.byte_len_filtering:
                 utt_list = self.get_byte_len_filtered_uttids(utt_list)
+                del self.byte_len_filtered_utt
 
             utt2lang_list = []
             text_list = []

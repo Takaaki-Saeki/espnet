@@ -169,8 +169,9 @@ class DataProcessorCC100:
                 text_path_phn = self.db_dir / lang / f"sentences_phn.txt"
                 text_path_byte = self.db_dir / lang / f"sentences_byte.txt"
                 in_list = []
-                with open(text_path_phn, "r") as fr:
-                    in_list += [line.strip() for line in fr]
+                if text_path_phn.exists():
+                    with open(text_path_phn, "r") as fr:
+                        in_list += [line.strip() for line in fr]
                 with open(text_path_byte, "r") as fr:
                     in_list += [line.strip() for line in fr]
             else:
@@ -323,8 +324,9 @@ class DataProcessorParaCrawl:
                 text_path_phn = self.db_dir / lang / f"sentences_phn.txt"
                 text_path_byte = self.db_dir / lang / f"sentences_byte.txt"
                 in_list = []
-                with open(text_path_phn, "r") as fr:
-                    in_list += [line.strip() for line in fr]
+                if text_path_phn.exists():
+                    with open(text_path_phn, "r") as fr:
+                        in_list += [line.strip() for line in fr]
                 with open(text_path_byte, "r") as fr:
                     in_list += [line.strip() for line in fr]
             else:
@@ -476,8 +478,9 @@ class DataProcessorCV:
                 text_path_phn = self.db_dir / lang / f"sentences_phn.txt"
                 text_path_byte = self.db_dir / lang / f"sentences_byte.txt"
                 in_list = []
-                with open(text_path_phn, "r") as fr:
-                    in_list += [line.strip() for line in fr]
+                if text_path_phn.exists():
+                    with open(text_path_phn, "r") as fr:
+                        in_list += [line.strip() for line in fr]
                 with open(text_path_byte, "r") as fr:
                     in_list += [line.strip() for line in fr]
             else:
@@ -631,8 +634,9 @@ class DataProcessorVoxp:
                 text_path_phn = self.db_dir / lang / f"sentences_phn.txt"
                 text_path_byte = self.db_dir / lang / f"sentences_byte.txt"
                 in_list = []
-                with open(text_path_phn, "r") as fr:
-                    in_list += [line.strip() for line in fr]
+                if text_path_phn.exists():
+                    with open(text_path_phn, "r") as fr:
+                        in_list += [line.strip() for line in fr]
                 with open(text_path_byte, "r") as fr:
                     in_list += [line.strip() for line in fr]
             else:
@@ -763,11 +767,16 @@ class DataProcessor:
         utt2text = {}
 
         if self.token_type == "bphn":
-            tsvs = [
-                self.tsv_path.parent / f"{self.data_name}_byte.tsv",
-                self.tsv_path.parent / f"{self.data_name}_phn.tsv"
-            ]
-            suffixes = ["_byte", "_phn"]
+            phn_path = self.tsv_path.parent / f"{self.data_name}_phn.tsv"
+            if phn_path.exists():
+                tsvs = [
+                    self.tsv_path.parent / f"{self.data_name}_byte.tsv",
+                    self.tsv_path.parent / f"{self.data_name}_phn.tsv"
+                ]
+                suffixes = ["_byte", "_phn"]
+            else:
+                tsvs = [self.tsv_path.parent / f"{self.data_name}_byte.tsv"]
+                suffixes = ["_byte"]
         else:
             tsvs = [self.tsv_path]
             suffixes = [""]

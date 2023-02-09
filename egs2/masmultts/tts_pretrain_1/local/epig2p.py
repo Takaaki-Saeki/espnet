@@ -278,6 +278,41 @@ def cc100():
         with open(out_path_bphn, "w") as fw:
             fw.write("\n".join(out_list_bphn))
 
+def cc100_non():
+    """Run phoneme conversion."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--db_dir", type=pathlib.Path, help="Input kaldi-style text.")
+    args = parser.parse_args()
+
+    langs = ["gu_in"]
+    for lang in langs:
+        print(f"Processing {lang} ...")
+        text_path = args.db_dir / lang / "sentences.txt"
+        os.makedirs(args.db_dir / lang, exist_ok=True)
+        out_path_byte = args.db_dir / lang / "sentences_byte.txt"
+        if out_path_byte.exists():
+            print(f"{lang} is already processed. Skipping.")
+            continue
+    
+        in_list = []
+        out_list_byte = []
+        with open(text_path, "r") as fr:
+            for line in fr:
+                in_list.append(line.strip())
+            
+        for line in tqdm.tqdm(in_list):
+            text = basic_normalizer(line)
+            if len(text) == 0:
+                continue
+            try:
+                byte_text = " ".join([str(x) for x in list(text.encode("utf-8"))])
+                out_list_byte.append(byte_text)
+            except:
+                continue
+        with open(out_path_byte, "w") as fw:
+            fw.write("\n".join(out_list_byte))
+
+
 def remove_symbols(s: str):
     return "".join(
         " " if unicodedata.category(c)[0] in "MSP" else c for c in unicodedata.normalize("NFKC", s)
@@ -380,6 +415,6 @@ def g2p_langtable():
 
 
 if __name__ == "__main__":
-    tsv2()
-    #cc100()
+    #tsv2()
+    cc100_non()
     #voxp()

@@ -156,11 +156,17 @@ class DataProcessorCC100:
 
     def process(self):
 
-        lang2utt = defaultdict(list)
-        utt2lang = {}
-        utt2text = {}
+        for setname in ["train", "dev", "test"]:
+            destination = self.dst_dir / self.data_type / setname
+            os.makedirs(destination, exist_ok=True)
+            with open(destination / "utt2lang", "w") as fw:
+                pass
+            with open(destination / "text", "w") as fw:
+                pass
 
         for lang in self.cc100_langs:
+            utt2text = {}
+            langutt = []
             lname = langtable_cc100()[lang]
             if self.lang_set is not None:
                 if lname not in self.lang_set:
@@ -191,8 +197,7 @@ class DataProcessorCC100:
                 if processed_text == "":
                     cnt_removed += 1
                     continue
-                lang2utt[lname].append(uttid)
-                utt2lang[uttid] = lname
+                langutt.append(uttid)
                 utt2text[uttid] = processed_text
                 # Byte length filtering
                 if self.token_type == "byte":
@@ -202,48 +207,33 @@ class DataProcessorCC100:
                 if byte_len <= self.byte_len_thresh:
                     self.byte_len_filtered_utt.add(uttid)
             print("Removed {} utterances".format(cnt_removed))
-            del in_list
 
-        uttids_all = {"train": [], "dev": [], "test": []}
-
-        for lang in lang2utt.keys():
             np.random.seed(self.seed)
-            rand_idx = np.random.permutation(len(lang2utt[lang]))
+            rand_idx = np.random.permutation(len(langutt))
+            uttids_all = {}
             train_idx = rand_idx[self.n_dev+self.n_test :]
-            train_set_all = [lang2utt[lang][idx] for idx in train_idx]
+            uttids_all["train"] = [langutt[idx] for idx in train_idx]
             if (self.few_sampling_langs is not None) and (lang in self.few_sampling_langs):
-                train_set_sampled = random.sample(train_set_all, int(len(train_set_all)*0.1))
-                uttids_all["train"] += train_set_sampled
-            else:
-                uttids_all["train"] += train_set_all
+                uttids_all["train"] = random.sample(uttids_all["train"], int(len(uttids_all["train"])*0.1))
+            if self.byte_len_filtering:
+                uttids_all["train"] = self.get_byte_len_filtered_uttids(uttids_all["train"])
             dev_idx = rand_idx[: self.n_dev]
-            uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
+            uttids_all["dev"] = [langutt[idx] for idx in dev_idx]
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
-            uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
-        
-        del lang2utt
-        
-        for setname in ["train", "dev", "test"]:
-            utt_list = uttids_all[setname]
-            if setname == "train" and self.byte_len_filtering:
-                utt_list = self.get_byte_len_filtered_uttids(utt_list)
-                del self.byte_len_filtered_utt
-            
-            destination = self.dst_dir / self.data_type / setname
-            os.makedirs(destination, exist_ok=True)
-            with open(destination / "utt2lang", "w") as fw:
-                pass
-            with open(destination / "text", "w") as fw:
-                pass
-            for uttid in utt_list:
-                utt2lang_line = f"{uttid} {utt2lang[uttid]}"
-                text_line = f"{uttid} {utt2text[uttid]}"
-                with open(destination / "utt2lang", "a") as fw:
-                    fw.write(utt2lang_line)
-                    fw.write("\n")
-                with open(destination / "text", "a") as fw:
-                    fw.write(text_line)
-                    fw.write("\n")
+            uttids_all["test"] = [langutt[idx] for idx in test_idx]
+            for setname in ["train", "dev", "test"]:
+                for uttid in uttids_all[setname]:
+                    utt2lang_line = f"{uttid} {lname}"
+                    text_line = f"{uttid} {utt2text[uttid]}"
+                    with open(destination / "utt2lang", "a") as fw:
+                        fw.write(utt2lang_line)
+                        fw.write("\n")
+                    with open(destination / "text", "a") as fw:
+                        fw.write(text_line)
+                        fw.write("\n")
+            del in_list
+            del uttids_all
+            del langutt
 
 
 class DataProcessorParaCrawl:
@@ -311,11 +301,17 @@ class DataProcessorParaCrawl:
 
     def process(self):
 
-        lang2utt = defaultdict(list)
-        utt2lang = {}
-        utt2text = {}
+        for setname in ["train", "dev", "test"]:
+            destination = self.dst_dir / self.data_type / setname
+            os.makedirs(destination, exist_ok=True)
+            with open(destination / "utt2lang", "w") as fw:
+                pass
+            with open(destination / "text", "w") as fw:
+                pass
 
         for lang in self.paracrawl_langs:
+            utt2text = {}
+            langutt = []
             lname = langtable_paracrawl()[lang]
             if self.lang_set is not None:
                 if lname not in self.lang_set:
@@ -346,8 +342,7 @@ class DataProcessorParaCrawl:
                 if processed_text == "":
                     cnt_removed += 1
                     continue
-                lang2utt[lname].append(uttid)
-                utt2lang[uttid] = lname
+                langutt.append(uttid)
                 utt2text[uttid] = processed_text
                 # Byte length filtering
                 if self.token_type == "byte":
@@ -357,48 +352,34 @@ class DataProcessorParaCrawl:
                 if byte_len <= self.byte_len_thresh:
                     self.byte_len_filtered_utt.add(uttid)
             print("Removed {} utterances".format(cnt_removed))
-            del in_list
 
-        uttids_all = {"train": [], "dev": [], "test": []}
-
-        for lang in lang2utt.keys():
             np.random.seed(self.seed)
-            rand_idx = np.random.permutation(len(lang2utt[lang]))
+            rand_idx = np.random.permutation(len(langutt))
+            uttids_all = {}
             train_idx = rand_idx[self.n_dev+self.n_test :]
-            train_set_all = [lang2utt[lang][idx] for idx in train_idx]
+            uttids_all["train"] = [langutt[idx] for idx in train_idx]
             if (self.few_sampling_langs is not None) and (lang in self.few_sampling_langs):
-                train_set_sampled = random.sample(train_set_all, int(len(train_set_all)*0.1))
-                uttids_all["train"] += train_set_sampled
-            else:
-                uttids_all["train"] += train_set_all
+                uttids_all["train"] = random.sample(uttids_all["train"], int(len(uttids_all["train"])*0.1))
+            if self.byte_len_filtering:
+                uttids_all["train"] = self.get_byte_len_filtered_uttids(uttids_all["train"])
             dev_idx = rand_idx[: self.n_dev]
-            uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
+            uttids_all["dev"] = [langutt[idx] for idx in dev_idx]
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
-            uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
-        
-        del lang2utt
-        
-        for setname in ["train", "dev", "test"]:
-            utt_list = uttids_all[setname]
-            if setname == "train" and self.byte_len_filtering:
-                utt_list = self.get_byte_len_filtered_uttids(utt_list)
-                del self.byte_len_filtered_utt
-            
-            destination = self.dst_dir / self.data_type / setname
-            os.makedirs(destination, exist_ok=True)
-            with open(destination / "utt2lang", "w") as fw:
-                pass
-            with open(destination / "text", "w") as fw:
-                pass
-            for uttid in utt_list:
-                utt2lang_line = f"{uttid} {utt2lang[uttid]}"
-                text_line = f"{uttid} {utt2text[uttid]}"
-                with open(destination / "utt2lang", "a") as fw:
-                    fw.write(utt2lang_line)
-                    fw.write("\n")
-                with open(destination / "text", "a") as fw:
-                    fw.write(text_line)
-                    fw.write("\n")
+            uttids_all["test"] = [langutt[idx] for idx in test_idx]
+            for setname in ["train", "dev", "test"]:
+                for uttid in uttids_all[setname]:
+                    utt2lang_line = f"{uttid} {lname}"
+                    text_line = f"{uttid} {utt2text[uttid]}"
+                    with open(destination / "utt2lang", "a") as fw:
+                        fw.write(utt2lang_line)
+                        fw.write("\n")
+                    with open(destination / "text", "a") as fw:
+                        fw.write(text_line)
+                        fw.write("\n")
+            del in_list
+            del uttids_all
+            del langutt
+
 
 class DataProcessorCV:
     def __init__(
@@ -465,11 +446,17 @@ class DataProcessorCV:
 
     def process(self):
 
-        lang2utt = defaultdict(list)
-        utt2lang = {}
-        utt2text = {}
+        for setname in ["train", "dev", "test"]:
+            destination = self.dst_dir / self.data_type / setname
+            os.makedirs(destination, exist_ok=True)
+            with open(destination / "utt2lang", "w") as fw:
+                pass
+            with open(destination / "text", "w") as fw:
+                pass
 
         for lang in self.cv_langs:
+            utt2text = {}
+            langutt = []
             lname = langtable_cv()[lang]
             if self.lang_set is not None:
                 if lname not in self.lang_set:
@@ -500,8 +487,7 @@ class DataProcessorCV:
                 if processed_text == "":
                     cnt_removed += 1
                     continue
-                lang2utt[lname].append(uttid)
-                utt2lang[uttid] = lname
+                langutt.append(uttid)
                 utt2text[uttid] = processed_text
                 # Byte length filtering
                 if self.token_type == "byte":
@@ -511,48 +497,34 @@ class DataProcessorCV:
                 if byte_len <= self.byte_len_thresh:
                     self.byte_len_filtered_utt.add(uttid)
             print("Removed {} utterances".format(cnt_removed))
-            del in_list
 
-        uttids_all = {"train": [], "dev": [], "test": []}
-
-        for lang in lang2utt.keys():
             np.random.seed(self.seed)
-            rand_idx = np.random.permutation(len(lang2utt[lang]))
+            rand_idx = np.random.permutation(len(langutt))
+            uttids_all = {}
             train_idx = rand_idx[self.n_dev+self.n_test :]
-            train_set_all = [lang2utt[lang][idx] for idx in train_idx]
+            uttids_all["train"] = [langutt[idx] for idx in train_idx]
             if (self.few_sampling_langs is not None) and (lang in self.few_sampling_langs):
-                train_set_sampled = random.sample(train_set_all, int(len(train_set_all)*0.1))
-                uttids_all["train"] += train_set_sampled
-            else:
-                uttids_all["train"] += train_set_all
+                uttids_all["train"] = random.sample(uttids_all["train"], int(len(uttids_all["train"])*0.1))
+            if self.byte_len_filtering:
+                uttids_all["train"] = self.get_byte_len_filtered_uttids(uttids_all["train"])
             dev_idx = rand_idx[: self.n_dev]
-            uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
+            uttids_all["dev"] = [langutt[idx] for idx in dev_idx]
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
-            uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
-        
-        del lang2utt
-        
-        for setname in ["train", "dev", "test"]:
-            utt_list = uttids_all[setname]
-            if setname == "train" and self.byte_len_filtering:
-                utt_list = self.get_byte_len_filtered_uttids(utt_list)
-                del self.byte_len_filtered_utt
-            
-            destination = self.dst_dir / self.data_type / setname
-            os.makedirs(destination, exist_ok=True)
-            with open(destination / "utt2lang", "w") as fw:
-                pass
-            with open(destination / "text", "w") as fw:
-                pass
-            for uttid in utt_list:
-                utt2lang_line = f"{uttid} {utt2lang[uttid]}"
-                text_line = f"{uttid} {utt2text[uttid]}"
-                with open(destination / "utt2lang", "a") as fw:
-                    fw.write(utt2lang_line)
-                    fw.write("\n")
-                with open(destination / "text", "a") as fw:
-                    fw.write(text_line)
-                    fw.write("\n")
+            uttids_all["test"] = [langutt[idx] for idx in test_idx]
+            for setname in ["train", "dev", "test"]:
+                for uttid in uttids_all[setname]:
+                    utt2lang_line = f"{uttid} {lname}"
+                    text_line = f"{uttid} {utt2text[uttid]}"
+                    with open(destination / "utt2lang", "a") as fw:
+                        fw.write(utt2lang_line)
+                        fw.write("\n")
+                    with open(destination / "text", "a") as fw:
+                        fw.write(text_line)
+                        fw.write("\n")
+            del in_list
+            del uttids_all
+            del langutt
+
 
 class DataProcessorVoxp:
     def __init__(
@@ -621,11 +593,17 @@ class DataProcessorVoxp:
 
     def process(self):
 
-        lang2utt = defaultdict(list)
-        utt2lang = {}
-        utt2text = {}
+        for setname in ["train", "dev", "test"]:
+            destination = self.dst_dir / self.data_type / setname
+            os.makedirs(destination, exist_ok=True)
+            with open(destination / "utt2lang", "w") as fw:
+                pass
+            with open(destination / "text", "w") as fw:
+                pass
 
         for lang in self.voxp_langs:
+            utt2text = {}
+            langutt = []
             lname = langtable_voxp()[lang]
             if self.lang_set is not None:
                 if lname not in self.lang_set:
@@ -656,8 +634,7 @@ class DataProcessorVoxp:
                 if processed_text == "":
                     cnt_removed += 1
                     continue
-                lang2utt[lname].append(uttid)
-                utt2lang[uttid] = lname
+                langutt.append(uttid)
                 utt2text[uttid] = processed_text
                 # Byte length filtering
                 if self.token_type == "byte":
@@ -667,48 +644,33 @@ class DataProcessorVoxp:
                 if byte_len <= self.byte_len_thresh:
                     self.byte_len_filtered_utt.add(uttid)
             print("Removed {} utterances".format(cnt_removed))
-            del in_list
 
-        uttids_all = {"train": [], "dev": [], "test": []}
-
-        for lang in lang2utt.keys():
             np.random.seed(self.seed)
-            rand_idx = np.random.permutation(len(lang2utt[lang]))
+            rand_idx = np.random.permutation(len(langutt))
+            uttids_all = {}
             train_idx = rand_idx[self.n_dev+self.n_test :]
-            train_set_all = [lang2utt[lang][idx] for idx in train_idx]
+            uttids_all["train"] = [langutt[idx] for idx in train_idx]
             if (self.few_sampling_langs is not None) and (lang in self.few_sampling_langs):
-                train_set_sampled = random.sample(train_set_all, int(len(train_set_all)*0.1))
-                uttids_all["train"] += train_set_sampled
-            else:
-                uttids_all["train"] += train_set_all
+                uttids_all["train"] = random.sample(uttids_all["train"], int(len(uttids_all["train"])*0.1))
+            if self.byte_len_filtering:
+                uttids_all["train"] = self.get_byte_len_filtered_uttids(uttids_all["train"])
             dev_idx = rand_idx[: self.n_dev]
-            uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
+            uttids_all["dev"] = [langutt[idx] for idx in dev_idx]
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
-            uttids_all["test"] += [lang2utt[lang][idx] for idx in test_idx]
-        
-        del lang2utt
-        
-        for setname in ["train", "dev", "test"]:
-            utt_list = uttids_all[setname]
-            if setname == "train" and self.byte_len_filtering:
-                utt_list = self.get_byte_len_filtered_uttids(utt_list)
-                del self.byte_len_filtered_utt
-            
-            destination = self.dst_dir / self.data_type / setname
-            os.makedirs(destination, exist_ok=True)
-            with open(destination / "utt2lang", "w") as fw:
-                pass
-            with open(destination / "text", "w") as fw:
-                pass
-            for uttid in utt_list:
-                utt2lang_line = f"{uttid} {utt2lang[uttid]}"
-                text_line = f"{uttid} {utt2text[uttid]}"
-                with open(destination / "utt2lang", "a") as fw:
-                    fw.write(utt2lang_line)
-                    fw.write("\n")
-                with open(destination / "text", "a") as fw:
-                    fw.write(text_line)
-                    fw.write("\n")
+            uttids_all["test"] = [langutt[idx] for idx in test_idx]
+            for setname in ["train", "dev", "test"]:
+                for uttid in uttids_all[setname]:
+                    utt2lang_line = f"{uttid} {lname}"
+                    text_line = f"{uttid} {utt2text[uttid]}"
+                    with open(destination / "utt2lang", "a") as fw:
+                        fw.write(utt2lang_line)
+                        fw.write("\n")
+                    with open(destination / "text", "a") as fw:
+                        fw.write(text_line)
+                        fw.write("\n")
+            del in_list
+            del uttids_all
+            del langutt
 
 class DataProcessor:
     def __init__(
@@ -848,6 +810,7 @@ class DataProcessor:
                 fw.write("\n".join(utt2lang_list))
             with open(destination / "text", "w") as fw:
                 fw.write("\n".join(text_list))
+        del uttids_all
 
 def merge_data_set(data_types, setname):
     dst_dir = pathlib.Path("data")

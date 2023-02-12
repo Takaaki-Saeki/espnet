@@ -227,6 +227,7 @@ class DataProcessorCC100:
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
             uttids_all["test"] = [langutt[idx] for idx in test_idx]
             for setname in ["train", "dev", "test"]:
+                destination = self.dst_dir / self.data_type / setname
                 for uttid in uttids_all[setname]:
                     utt2lang_line = f"{uttid} {lname}"
                     text_line = f"{uttid} {utt2text[uttid]}"
@@ -377,6 +378,7 @@ class DataProcessorParaCrawl:
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
             uttids_all["test"] = [langutt[idx] for idx in test_idx]
             for setname in ["train", "dev", "test"]:
+                destination = self.dst_dir / self.data_type / setname
                 for uttid in uttids_all[setname]:
                     utt2lang_line = f"{uttid} {lname}"
                     text_line = f"{uttid} {utt2text[uttid]}"
@@ -522,6 +524,7 @@ class DataProcessorCV:
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
             uttids_all["test"] = [langutt[idx] for idx in test_idx]
             for setname in ["train", "dev", "test"]:
+                destination = self.dst_dir / self.data_type / setname
                 for uttid in uttids_all[setname]:
                     utt2lang_line = f"{uttid} {lname}"
                     text_line = f"{uttid} {utt2text[uttid]}"
@@ -674,6 +677,7 @@ class DataProcessorVoxp:
             test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
             uttids_all["test"] = [langutt[idx] for idx in test_idx]
             for setname in ["train", "dev", "test"]:
+                destination = self.dst_dir / self.data_type / setname
                 for uttid in uttids_all[setname]:
                     utt2lang_line = f"{uttid} {lname}"
                     text_line = f"{uttid} {utt2text[uttid]}"

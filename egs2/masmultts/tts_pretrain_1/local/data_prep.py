@@ -156,6 +156,11 @@ class DataProcessorCC100:
 
     def process(self):
 
+        out_db_dir = self.dst_dir / self.data_type
+        if out_db_dir.exists():
+            print("Skipping data processing as it is already done.")
+            return
+
         for setname in ["train", "dev", "test"]:
             destination = self.dst_dir / self.data_type / setname
             os.makedirs(destination, exist_ok=True)
@@ -300,6 +305,11 @@ class DataProcessorParaCrawl:
         return s
 
     def process(self):
+
+        out_db_dir = self.dst_dir / self.data_type
+        if out_db_dir.exists():
+            print("Skipping data processing as it is already done.")
+            return
 
         for setname in ["train", "dev", "test"]:
             destination = self.dst_dir / self.data_type / setname
@@ -593,6 +603,11 @@ class DataProcessorVoxp:
 
     def process(self):
 
+        out_db_dir = self.dst_dir / self.data_type
+        if out_db_dir.exists():
+            print("Skipping data processing as it is already done.")
+            return
+
         for setname in ["train", "dev", "test"]:
             destination = self.dst_dir / self.data_type / setname
             os.makedirs(destination, exist_ok=True)
@@ -816,12 +831,16 @@ def merge_data_set(data_types, setname):
     dst_dir = pathlib.Path("data")
     os.makedirs(dst_dir / setname, exist_ok=True)
     for fname in ["utt2lang", "text"]:
-        out_list = []
-        for data_type in data_types:
-            with open(dst_dir / data_type / setname / fname, "r") as fr:
-                out_list += [line.strip() for line in fr]
+        # Initialize each file
         with open(dst_dir / setname / fname, "w") as fw:
-            fw.write("\n".join(out_list))
+            pass
+        for data_type in data_types:
+            print(f"Writing {data_type} ...")
+            with open(dst_dir / data_type / setname / fname, "r") as fr:
+                for line in tqdm.tqdm(fr):
+                    with open(dst_dir / setname / fname, "a") as fw:
+                        fw.write(line.strip())
+                        fw.write("\n")
 
 def merge_data(data_types):
     for setname in ["train", "dev", "test"]:

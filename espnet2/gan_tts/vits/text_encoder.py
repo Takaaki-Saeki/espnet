@@ -125,7 +125,7 @@ class TextEncoder(torch.nn.Module):
                 pos_enc_layer_type=positional_encoding_layer_type,
                 rel_pos_type="legacy",
                 cgmlp_linear_units=768,
-                cgmlp_conv_kernel=7,
+                cgmlp_conv_kernel=3,
                 use_linear_after_conv=False,
                 gate_activation="identity",
                 input_layer=None,

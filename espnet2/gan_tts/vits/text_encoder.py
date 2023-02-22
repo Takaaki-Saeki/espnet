@@ -14,6 +14,7 @@ import torch
 
 from espnet2.asr.encoder.conformer_encoder import ConformerEncoder
 from espnet2.asr.encoder.e_branchformer_encoder import EBranchformerEncoder
+from espnet2.asr.encoder.branchformer_encoder import BranchformerEncoder
 from espnet.nets.pytorch_backend.nets_utils import make_non_pad_mask
 
 
@@ -138,6 +139,25 @@ class TextEncoder(torch.nn.Module):
                 ffn_activation_type="swish",
                 positionwise_layer_type=positionwise_layer_type,
                 merge_conv_kernel=3)
+        elif encoder_type == "branchformer":
+            self.encoder = BranchformerEncoder(
+                input_size=attention_dim,
+                output_size=attention_dim,
+                attention_heads=attention_heads,
+                num_blocks=blocks,
+                dropout_rate=dropout_rate,
+                positional_dropout_rate=positional_dropout_rate,
+                attention_dropout_rate=attention_dropout_rate,
+                attention_layer_type=self_attention_layer_type,
+                pos_enc_layer_type=positional_encoding_layer_type,
+                rel_pos_type="legacy",
+                cgmlp_linear_units=768,
+                cgmlp_conv_kernel=3,
+                use_linear_after_conv=False,
+                gate_activation="identity",
+                input_layer=None,
+                zero_triu=False,
+                padding_idx=-1)
         else:
             raise ValueError(f"{encoder_type} is not supported.")
         self.proj = torch.nn.Conv1d(attention_dim, attention_dim * 2, 1)

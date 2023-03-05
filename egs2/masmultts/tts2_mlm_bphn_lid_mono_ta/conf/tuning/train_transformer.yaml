@@ -26,9 +26,9 @@ tts_pretrain_conf:                  # keyword arguments for the selected model
     transformer_enc_dropout_rate: 0.1                # dropout rate for transformer encoder layer
     transformer_enc_positional_dropout_rate: 0.1     # dropout rate for transformer encoder positional encoding
     transformer_enc_attn_dropout_rate: 0.1           # dropout rate for transformer encoder attention layer
-    langs: 17                        # number of languages
+    langs: 17                       # number of languages
     use_adapter: True                # whether to use language adapter
-    adapter_type: "residual"         # type of adapter
+    adapter_type: "residual"        # type of adapter
 
 ##########################################################
 #            OPTIMIZER & SCHEDULER SETTING               #
@@ -67,5 +67,5 @@ best_model_criterion:
     - loss
     - min
 init_param: [
-"../tts2_pretrain_byte_lid/exp/tts_train_byte/latest.pth"
+"../tts2_pretrain_bphn_lid/exp/tts_train_word/latest.pth"
 ]

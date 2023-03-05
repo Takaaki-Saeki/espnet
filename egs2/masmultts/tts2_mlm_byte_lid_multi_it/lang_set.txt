@@ -1,9 +1,3 @@
 fr_fr
 es_419
-de_de
-ru_ru
-nl_nl
-fi_fi
-hu_hu
-el_gr
 it_it

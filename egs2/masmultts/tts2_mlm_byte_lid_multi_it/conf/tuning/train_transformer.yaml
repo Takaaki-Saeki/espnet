@@ -66,10 +66,6 @@ best_model_criterion:
 -   - train
     - loss
     - min
-freeze_param: [
-"tts_pretrain.lid_emb",
-"tts_pretrain.encoder.embed",
-]
 init_param: [
 "../tts2_pretrain_byte_lid/exp/tts_train_byte/latest.pth"
 ]

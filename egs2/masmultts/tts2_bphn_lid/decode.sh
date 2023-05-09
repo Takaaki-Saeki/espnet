@@ -28,6 +28,7 @@ n_train_utt=null
 lang2lid_override="local/lang2lid_override_16"
 token_list_override="local/token_list_16_${token_type}.txt"
 spk_override=null
+bphn_phn_infer=false
 #########################################################
 
 local_data_opts=""
@@ -44,6 +45,7 @@ local_data_opts+=" --lang_family ${lang_family}"
 local_data_opts+=" --do_trimming ${do_trimming}"
 local_data_opts+=" --spk_set ${spk_set}"
 local_data_opts+=" --n_train_utt ${n_train_utt}"
+local_data_opts+=" --bphn_phn_infer ${bphn_phn_infer}"
 
 opts=
 if [ "${fs}" -eq 22050 ]; then

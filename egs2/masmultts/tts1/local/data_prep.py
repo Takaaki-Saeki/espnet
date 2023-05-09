@@ -80,6 +80,10 @@ class DataProcessorOther:
         token_type,
         lang_set=None,
         byte_len_filtering=False,
+        spk_set=None,
+        n_train_utt=None,
+        use_only_byte_for_bphn=False,
+        bphn_phn_infer=False
     ):
         self.dst_dir = pathlib.Path("data")
         self.data_type = data_type
@@ -87,6 +91,8 @@ class DataProcessorOther:
         self.token_type = token_type
         self.byte_len_filtering = byte_len_filtering
         self.byte_len_thresh = 300
+        self.use_only_byte_for_bphn = use_only_byte_for_bphn
+        self.bphn_phn_infer = bphn_phn_infer
         self.seed = 0
 
         if lang_set is not None:
@@ -100,6 +106,14 @@ class DataProcessorOther:
         self.data_name = "other_tts_data"
         self.n_dev = 10
         self.n_test = 100
+
+        self.n_train_utt = n_train_utt
+
+        if spk_set is not None:
+            with open(spk_set, "r") as fr:
+                self.spk_set = [line.strip() for line in fr]
+        else:
+            self.spk_set = None
         
         self.byte_len_filtered_utt = None
         if self.byte_len_filtering:
@@ -139,12 +153,17 @@ class DataProcessorOther:
         utt2text = {}
 
         if self.token_type == "bphn":
-            tsvs = [
-                self.tsv_path.parent / f"{self.data_name}_byte.tsv",
-                self.tsv_path.parent / f"{self.data_name}_phn.tsv"
-            ]
-            suffixes = ["_byte", "_phn"]
-            lang2utt_list = []
+            if self.use_only_byte_for_bphn:
+                tsvs = [self.tsv_path.parent / f"{self.data_name}_byte.tsv"]
+                suffixes = ["_byte"]
+                lang2utt_list = []
+            else:
+                tsvs = [
+                    self.tsv_path.parent / f"{self.data_name}_byte.tsv",
+                    self.tsv_path.parent / f"{self.data_name}_phn.tsv"
+                ]
+                suffixes = ["_byte", "_phn"]
+                lang2utt_list = []
         else:
             tsvs = [self.tsv_path]
             suffixes = [""]
@@ -179,6 +198,9 @@ class DataProcessorOther:
                     if self.lang_set is not None:
                         if lang not in self.lang_set:
                             continue
+                    if self.spk_set is not None:
+                        if spk not in self.spk_set:
+                            continue
                     lang2utt[lang].append(uttid)
                     utt2spk[uttid] = spk
                     utt2lang[uttid] = lang
@@ -189,25 +211,38 @@ class DataProcessorOther:
         uttids_all = {"train": [], "dev": [], "test": []}
 
         uttids_test = []
+        if self.bphn_phn_infer:
+            test_token_idx = 1 # phn
+        else:
+            test_token_idx = 0 # byte
+
         for l2u_idx, lang2utt in enumerate(lang2utt_list):
             for lang in lang2utt.keys():
                 np.random.seed(self.seed)
                 rand_idx = np.random.permutation(len(lang2utt[lang]))
                 train_idx = rand_idx[self.n_dev+self.n_test :]
+                if self.n_train_utt is not None:
+                    train_idx = train_idx[: self.n_train_utt]
                 uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
                 dev_idx = rand_idx[: self.n_dev]
                 uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
-                if l2u_idx == 0:
+                if l2u_idx == test_token_idx:
                     test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
                     uttids_test += [lang2utt[lang][idx] for idx in test_idx]
         
         # Avoiding leak of test utterances
         if self.token_type == "bphn":
             print("Removing corresponding utterances from test data.")
-            for uttid_test in uttids_test:
-                uttid_test_phn = uttid_test.replace("_byte", "_phn")
-                if (uttid_test_phn not in uttids_all["train"]):
-                    uttids_all["test"].append(uttid_test)
+            if self.bphn_phn_infer:
+                for uttid_test in uttids_test:
+                    uttid_test_byte = uttid_test.replace("_phn", "_byte")
+                    if (uttid_test_byte not in uttids_all["train"]):
+                        uttids_all["test"].append(uttid_test)
+            else:
+                for uttid_test in uttids_test:
+                    uttid_test_phn = uttid_test.replace("_byte", "_phn")
+                    if (uttid_test_phn not in uttids_all["train"]):
+                        uttids_all["test"].append(uttid_test)
         else:
             for uttid_test in uttids_test:
                 uttids_all["test"].append(uttid_test)
@@ -256,6 +291,8 @@ class DataProcessor:
         spk_set=None,
         n_train_utt=None,
         override_spk_set=None,
+        use_only_byte_for_bphn=False,
+        bphn_phn_infer=False,
         selected_data_types=None
     ):
         self.dst_dir = pathlib.Path("data")
@@ -266,6 +303,8 @@ class DataProcessor:
         self.byte_len_filtering = byte_len_filtering
         self.mos_thresh = 2.0
         self.byte_len_thresh = 300
+        self.use_only_byte_for_bphn = use_only_byte_for_bphn
+        self.bphn_phn_infer = bphn_phn_infer
         self.seed = 0
 
         if lang_set is not None:
@@ -429,12 +468,17 @@ class DataProcessor:
             self.spk30min_filtered_utt = set()
 
         if self.token_type == "bphn":
-            tsvs = [
-                self.tsv_path.parent / f"{self.data_name}_byte.tsv",
-                self.tsv_path.parent / f"{self.data_name}_phn.tsv"
-            ]
-            suffixes = ["_byte", "_phn"]
-            lang2utt_list = []
+            if self.use_only_byte_for_bphn:
+                tsvs = [self.tsv_path.parent / f"{self.data_name}_byte.tsv"]
+                suffixes = ["_byte"]
+                lang2utt_list = []
+            else:
+                tsvs = [
+                    self.tsv_path.parent / f"{self.data_name}_byte.tsv",
+                    self.tsv_path.parent / f"{self.data_name}_phn.tsv"
+                ]
+                suffixes = ["_byte", "_phn"]
+                lang2utt_list = []
         else:
             tsvs = [self.tsv_path]
             suffixes = [""]
@@ -494,6 +538,11 @@ class DataProcessor:
         uttids_all = {"train": [], "dev": [], "test": []}
 
         uttids_test = []
+        if self.bphn_phn_infer:
+            test_token_idx = 1 # phn
+        else:
+            test_token_idx = 0 # byte
+
         for l2u_idx, lang2utt in enumerate(lang2utt_list):
             for lang in lang2utt.keys():
                 np.random.seed(self.seed)
@@ -504,17 +553,23 @@ class DataProcessor:
                 uttids_all["train"] += [lang2utt[lang][idx] for idx in train_idx]
                 dev_idx = rand_idx[: self.n_dev]
                 uttids_all["dev"] += [lang2utt[lang][idx] for idx in dev_idx]
-                if l2u_idx == 0:
+                if l2u_idx == test_token_idx:
                     test_idx = rand_idx[self.n_dev : self.n_dev+self.n_test]
                     uttids_test += [lang2utt[lang][idx] for idx in test_idx]
         
         # Avoiding leak of test utterances
         if self.token_type == "bphn":
             print("Removing corresponding utterances from test data.")
-            for uttid_test in uttids_test:
-                uttid_test_phn = uttid_test.replace("_byte", "_phn")
-                if (uttid_test_phn not in uttids_all["train"]):
-                    uttids_all["test"].append(uttid_test)
+            if self.bphn_phn_infer:
+                for uttid_test in uttids_test:
+                    uttid_test_byte = uttid_test.replace("_phn", "_byte")
+                    if (uttid_test_byte not in uttids_all["train"]):
+                        uttids_all["test"].append(uttid_test)
+            else:
+                for uttid_test in uttids_test:
+                    uttid_test_phn = uttid_test.replace("_byte", "_phn")
+                    if (uttid_test_phn not in uttids_all["train"]):
+                        uttids_all["test"].append(uttid_test)
         else:
             for uttid_test in uttids_test:
                 uttids_all["test"].append(uttid_test)
@@ -585,6 +640,8 @@ def main():
     parser.add_argument("--spk_set", required=False, default=None, type=pathlib.Path)
     parser.add_argument("--override_spk_set", required=False, default=None, type=pathlib.Path)
     parser.add_argument("--n_train_utt", required=False, default=None, type=int)
+    parser.add_argument("--use_only_byte_for_bphn", action="store_true")
+    parser.add_argument("--bphn_phn_infer", action="store_true")
     args = parser.parse_args()
 
     data_types = []
@@ -607,7 +664,9 @@ def main():
             args.byte_len_filtering,
             args.spk_set,
             args.n_train_utt,
-            args.override_spk_set).process()
+            args.override_spk_set,
+            args.use_only_byte_for_bphn,
+            args.bphn_phn_infer).process()
         data_types.append("mailabs")
 
     if args.use_css10:
@@ -623,7 +682,9 @@ def main():
             args.byte_len_filtering,
             args.spk_set,
             args.n_train_utt,
-            args.override_spk_set).process()
+            args.override_spk_set,
+            args.use_only_byte_for_bphn,
+            args.bphn_phn_infer).process()
         data_types.append("css10")
 
     if args.use_other_tts_data:
@@ -634,7 +695,11 @@ def main():
             tsv_path,
             args.token_type,
             args.lang_set,
-            args.byte_len_filtering).process()
+            args.byte_len_filtering,
+            args.spk_set,
+            args.n_train_utt,
+            args.use_only_byte_for_bphn,
+            args.bphn_phn_infer).process()
         data_types.append("other_tts_data")
 
     if args.use_fleurs:
@@ -651,6 +716,8 @@ def main():
             args.spk_set,
             args.n_train_utt,
             args.override_spk_set,
+            args.use_only_byte_for_bphn,
+            args.bphn_phn_infer,
             selected_data_types=data_types).process()
         data_types.append("fleurs")
     elif args.holdout_lang_set is not None:
@@ -666,7 +733,9 @@ def main():
             args.byte_len_filtering,
             args.spk_set,
             args.n_train_utt,
-            args.override_spk_set).process()
+            args.override_spk_set,
+            args.use_only_byte_for_bphn,
+            args.bphn_phn_infer).process()
         data_types.append("fleurs")
     
     assert len(data_types) > 0, "No data type is specified."

@@ -1,0 +1,3 @@
+fr_fr
+es_419
+it_it

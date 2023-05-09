@@ -13,20 +13,21 @@ n_shift=256
 token_type=byte   # byte, tphn, phn, bphn
 use_mailabs=true
 use_css10=true
-use_fleurs=false
+use_fleurs=true
 use_other_tts_data=false
 use_lid=false
 use_lvector=false
 mos_filtering=false
 byte_len_filtering=true
-lang_set="lang_set_decode.txt"
+lang_set="lang_set.txt"
 holdout_lang_set=null
 do_trimming=false
 lang_family=null
 spk_set=null
 n_train_utt=null
+use_only_byte_for_bphn=false
 lang2lid_override=null
-token_list_override="local/token_list_20_${token_type}.txt"
+token_list_override=null
 spk_override=null
 #########################################################
 
@@ -44,6 +45,7 @@ local_data_opts+=" --lang_family ${lang_family}"
 local_data_opts+=" --do_trimming ${do_trimming}"
 local_data_opts+=" --spk_set ${spk_set}"
 local_data_opts+=" --n_train_utt ${n_train_utt}"
+local_data_opts+=" --use_only_byte_for_bphn ${use_only_byte_for_bphn}"
 
 opts=
 if [ "${fs}" -eq 22050 ]; then

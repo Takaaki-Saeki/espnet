@@ -78,8 +78,8 @@ scheduler_conf:         # keyword arguments for selected scheduler
 ##########################################################
 #                OTHER TRAINING SETTING                  #
 ##########################################################
-num_iters_per_epoch: 0   # number of iterations per epoch
-max_epoch: 1             # number of epochs
+num_iters_per_epoch: 200   # number of iterations per epoch
+max_epoch: 300             # number of epochs
 grad_clip: 2.0              # gradient clipping norm
 # grad_clip: 1.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection

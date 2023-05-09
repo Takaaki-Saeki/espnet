@@ -31,6 +31,8 @@ lang_family=null
 spk_set=null
 n_train_utt=null
 override_spk_set=null
+use_only_byte_for_bphn=false
+bphn_phn_infer=false
 
 log "$0 $*"
 . utils/parse_options.sh
@@ -71,6 +73,12 @@ if [ ${n_train_utt} != null ]; then
 fi
 if [ ${override_spk_set} != null ]; then
     opts_data+=" --override_spk_set ${override_spk_set}"
+fi
+if [ ${use_only_byte_for_bphn} = true ]; then
+    opts_data+=" --use_only_byte_for_bphn"
+fi
+if [ ${bphn_phn_infer} = true ]; then
+    opts_data+=" --bphn_phn_infer"
 fi
 
 

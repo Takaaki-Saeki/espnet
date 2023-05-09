@@ -23,8 +23,9 @@ lang_set="lang_set.txt"
 holdout_lang_set=null
 do_trimming=false
 lang_family=null
-spk_set=null
-n_train_utt=null
+spk_set="local/spk_set_it"
+n_train_utt=500
+use_only_byte_for_bphn=true
 lang2lid_override="local/lang2lid_override_16"
 token_list_override="local/token_list_16_${token_type}.txt"
 spk_override=null
@@ -44,6 +45,7 @@ local_data_opts+=" --lang_family ${lang_family}"
 local_data_opts+=" --do_trimming ${do_trimming}"
 local_data_opts+=" --spk_set ${spk_set}"
 local_data_opts+=" --n_train_utt ${n_train_utt}"
+local_data_opts+=" --use_only_byte_for_bphn ${use_only_byte_for_bphn}"
 
 opts=
 if [ "${fs}" -eq 22050 ]; then
@@ -106,7 +108,7 @@ test_sets=test
     --g2p "${g2p}" \
     --train_config "${train_config}" \
     --inference_config "${inference_config}" \
-    --inference_model valid.loss.best.pth \
+    --inference_model latest.pth \
     --min_wav_duration 0.1 \
     --max_wav_duration 15 \
     --train_set "${train_set}" \

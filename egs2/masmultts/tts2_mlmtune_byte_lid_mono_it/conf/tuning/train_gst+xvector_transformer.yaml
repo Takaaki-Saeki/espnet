@@ -78,8 +78,8 @@ scheduler_conf:         # keyword arguments for selected scheduler
 ##########################################################
 #                OTHER TRAINING SETTING                  #
 ##########################################################
-num_iters_per_epoch: 0   # number of iterations per epoch
-max_epoch: 1             # number of epochs
+num_iters_per_epoch: 200   # number of iterations per epoch
+max_epoch: 300             # number of epochs
 grad_clip: 2.0              # gradient clipping norm
 # grad_clip: 1.0              # gradient clipping norm
 grad_noise: false           # whether to use gradient noise injection
@@ -104,9 +104,9 @@ best_model_criterion:
     - min
 # freeze_param: ["tts"]
 init_param: [
-"../tts2_mlm_byte_lid_mono_pl/exp/tts_train_byte/latest.pth:tts_pretrain.encoder.adapter:tts.encoder.adapter",
-"../tts2_mlm_byte_lid_mono_pl/exp/tts_train_byte/latest.pth:tts_pretrain.encoder.embed:tts.encoder.embed",
-"../tts2_mlm_byte_lid_mono_pl/exp/tts_train_byte/latest.pth:tts_pretrain.lid_emb:tts.lid_emb",
+"../tts2_mlm_byte_lid_mono_it/exp/tts_train_byte/latest.pth:tts_pretrain.encoder.adapter:tts.encoder.adapter",
+"../tts2_mlm_byte_lid_mono_it/exp/tts_train_byte/latest.pth:tts_pretrain.encoder.embed:tts.encoder.embed",
+"../tts2_mlm_byte_lid_mono_it/exp/tts_train_byte/latest.pth:tts_pretrain.lid_emb:tts.lid_emb",
 "../tts2_byte_lid/exp/tts_train_raw_byte/valid.loss.best.pth:tts.encoder.encoders:tts.encoder.encoders",
 "../tts2_byte_lid/exp/tts_train_raw_byte/valid.loss.best.pth:tts.encoder.after_norm:tts.encoder.after_norm",
 "../tts2_byte_lid/exp/tts_train_raw_byte/valid.loss.best.pth:tts.gst:tts.gst",

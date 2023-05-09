@@ -87,6 +87,8 @@ class EvalSet(torch.utils.data.Dataset):
                         self.utt2corpus[uttid] = "css10"
                     elif cp.parent.parent.name == "fleurs":
                         self.utt2corpus[uttid] = "fleurs"
+                    elif cp.parent.parent.name == "other_tts_data":
+                        self.utt2corpus[uttid] = "other_tts_data"
                     else:
                         raise ValueError(f"Unknown corpus {cp.parent.parent.name}")
 
@@ -121,6 +123,10 @@ class EvalSet(torch.utils.data.Dataset):
         audio, sr = torchaudio.load(self.wavpaths[item])
         assert sr == 16000
         uttid = self.wavpaths[item].stem
+        if uttid.endswith("_byte"):
+            uttid = uttid[:-5]
+        if uttid.endswith("_phn"):
+            uttid = uttid[:-4]
         lang = self.utt2lang[uttid].split("_")[0]
         corpus = self.utt2corpus[uttid]
         text = self.utt2text[uttid]
@@ -142,6 +148,7 @@ def main():
     parser.add_argument("--decode_dir",required=True, type=pathlib.Path)
     parser.add_argument("--data_dir",required=True, type=pathlib.Path)
     parser.add_argument("--setname", default="test", type=str)
+    parser.add_argument("--results_dir", default="results", type=str)
     parser.add_argument("--case_name", required=True, type=str)
     parser.add_argument("--is_family", action="store_true")
     parser.add_argument("--db_dir", required=False, type=pathlib.Path, default=None)
@@ -149,7 +156,7 @@ def main():
     args = parser.parse_args()
 
     print(f"Case name: {args.case_name}")
-    result_dir = pathlib.Path("results")
+    result_dir = pathlib.Path(args.results_dir)
     os.makedirs(result_dir, exist_ok=True)
 
     wav_dir = args.decode_dir / args.setname / "wav"
@@ -169,7 +176,7 @@ def main():
     # Only allowing batchsize: 1 for now
     loader = torch.utils.data.DataLoader(dataset, batch_size=1)
 
-    model = whisper.load_model("base")
+    model = whisper.load_model("large")
     print(
         f"Model is {'multilingual' if model.is_multilingual else 'English-only'} "
         f"and has {sum(np.prod(p.shape) for p in model.parameters()):,} parameters."

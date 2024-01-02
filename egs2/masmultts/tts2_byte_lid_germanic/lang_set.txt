@@ -1,0 +1,2 @@
+de_de
+nl_nl
